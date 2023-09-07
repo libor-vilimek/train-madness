@@ -1,41 +1,118 @@
+import("pathfinder.rail", "RailPathFinder", 1);
+require("constants.nut");
+require("helper.nut");
+require("rails.nut");
+
 /**
  * This is very simple AI that was written while I was ill due to having covid-19.
  * I spent only two partial days working on it, therefore it really is intended to be simple.
  * It will try to spread to all cities with buses alone.
  */
 class TrainMadness extends AIController {
-    // Some nasty surprise - you have find cargoId in list, you cannot just use i.e. AICargo.CC_PASSENGERS
-    // This stores the CargoId for passengers. More in constructor
-    passengerCargoId = -1;
+	constructor() {
+		local railTypes = AIRailTypeList();
+		foreach(railType, value in railTypes) {
+			AILog.Info(railType + ": " + AIRail.GetName(railType));
+			AIRail.SetCurrentRailType(railType);
+		}
 
-    constructor() {
-        // Without this you cannot build road, station or depot
-        AIRoad.SetCurrentRoadType(AIRoad.ROADTYPE_ROAD);
+		// Helper.WriteAllCargoTypes();
+	}
 
-        // Persist passengers
-        local list = AICargoList();
-        for (local i = list.Begin(); list.IsEnd() == false; i = list.Next()) {
-            if (AICargo.HasCargoClass(i, AICargo.CC_PASSENGERS)) {
-                this.passengerCargoId = i;
-                break;
-            }
-        }
-    }
-    function Start() ;
+	function Start();
 }
 
 /**
  * Äll the logic starts here
  */
 function TrainMadness::Start() {
-    AICompany.SetName("TrainMadness")
-    AICompany.SetLoanAmount(AICompany.GetMaxLoanAmount());
-    AILog.Info("Starting, wheee");
-    while (true) {
-        this.Sleep(10);
-        // If we dont have enough money, just dont build any other stations and buses there
-        if (AICompany.GetBankBalance(AICompany.COMPANY_SELF) > (AICompany.GetMaxLoanAmount() / 10)) {
+	AICompany.SetName("TrainMadness")
+	AICompany.SetLoanAmount(AICompany.GetMaxLoanAmount());
+	AILog.Info("Starting");
 
-        }
-    }
+	this.FindIndustryRoute();
+
+	/*
+
+	local townlist = AITownList();
+	townlist.Valuate(AITown.GetPopulation);
+	townlist.Sort(AIList.SORT_BY_VALUE, false);
+	foreach (town, value in townlist) {
+	    // AILog.Info(town);
+	    local location = AITown.GetLocation(town);
+	    local list = AITileList();
+	    list.AddRectangle(location - AIMap.GetTileIndex(16, 16), location + AIMap.GetTileIndex(16, 16));
+	    foreach (tile, value in list) {
+	        //AILog.Info("building tile, yeaaa");
+	        //AILog.Info(AIRail.BuildRailTrack(tile, AIRail.RAILTRACK_NE_SW ));
+	    }
+	}
+
+	*/
+
+	while (true) {
+		this.Sleep(10);
+	}
+}
+
+function TrainMadness::FindIndustryRoute() {
+	local industryList = AIIndustryList_CargoProducing(Constants.CARGO_COAL);
+	industryList.Valuate(AIIndustry.GetLastMonthProduction, Constants.CARGO_COAL);
+	industryList.Sort(AIList.SORT_BY_VALUE, false);
+	AILog.Info(AIIndustry.GetName(industryList.Begin()));
+
+	local location = AIIndustry.GetLocation(industryList.Begin()) + AIMap.GetTileIndex(7, 7);
+	// AIRail.BuildRailTrack(location, AIRail.RAILTRACK_NE_SW);
+	// AIRail.BuildRailTrack(location - AIMap.GetTileIndex(8,8), AIRail.RAILTRACK_NE_SW)
+
+	industryList = AIIndustryList_CargoAccepting(Constants.INDUSTRY_POWER_STATION);
+	industryList.Valuate(AIIndustry.GetDistanceManhattanToTile, location);
+	industryList.Sort(AIList.SORT_BY_VALUE, true);
+    AILog.Info(AIIndustry.GetName(industryList.Begin()));
+	local secondLocation = AIIndustry.GetLocation(industryList.Begin()) - AIMap.GetTileIndex(7, 7);
+	AILog.Info(location);
+	AILog.Info(secondLocation);
+
+	/*
+	local pathfinder = RailPathFinder();
+	pathfinder.InitializePath([
+		[location, location + AIMap.GetTileIndex(-1, 0)]
+	], [
+		[secondLocation + AIMap.GetTileIndex(-1, 0), secondLocation]
+	]);
+
+    /*
+
+    local path = pathfinder.FindPath(-1);
+    AILog.Info(path);
+
+	local prev = null;
+	local prevprev = null;
+	while (path != null) {
+		if (prevprev != null) {
+			if (AIMap.DistanceManhattan(prev, path.GetTile()) > 1) {
+				if (AITunnel.GetOtherTunnelEnd(prev) == path.GetTile()) {
+					AITunnel.BuildTunnel(AIVehicle.VT_RAIL, prev);
+				} else {
+					local bridge_list = AIBridgeList_Length(AIMap.DistanceManhattan(path.GetTile(), prev) + 1);
+					bridge_list.Valuate(AIBridge.GetMaxSpeed);
+					bridge_list.Sort(AIAbstractList.SORT_BY_VALUE, false);
+					AIBridge.BuildBridge(AIVehicle.VT_RAIL, bridge_list.Begin(), prev, path.GetTile());
+				}
+				prevprev = prev;
+				prev = path.GetTile();
+				path = path.GetParent();
+			} else {
+                AILog.Info("Bulidiiiing");
+				AIRail.BuildRail(prevprev, prev, path.GetTile());
+			}
+		}
+		if (path != null) {
+			prevprev = prev;
+			prev = path.GetTile();
+			path = path.GetParent();
+		}
+	}*/
+
+	Rails.BuildRail([location, location + AIMap.GetTileIndex(-1, 0)], [secondLocation + AIMap.GetTileIndex(-1, 0), secondLocation]);
 }
