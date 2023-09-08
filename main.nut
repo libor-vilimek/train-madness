@@ -56,63 +56,35 @@ function TrainMadness::Start() {
 }
 
 function TrainMadness::FindIndustryRoute() {
-	local industryList = AIIndustryList_CargoProducing(Constants.CARGO_COAL);
-	industryList.Valuate(AIIndustry.GetLastMonthProduction, Constants.CARGO_COAL);
-	industryList.Sort(AIList.SORT_BY_VALUE, false);
-	AILog.Info(AIIndustry.GetName(industryList.Begin()));
+	// local industryList = AIIndustryList_CargoProducing(Constants.CARGO_COAL);
+	// industryList.Valuate(AIIndustry.GetLastMonthProduction, Constants.CARGO_COAL);
+	// industryList.Sort(AIList.SORT_BY_VALUE, false);
+	// AILog.Info(AIIndustry.GetName(industryList.Begin()));
 
-	local location = AIIndustry.GetLocation(industryList.Begin()) + AIMap.GetTileIndex(7, 7);
-	// AIRail.BuildRailTrack(location, AIRail.RAILTRACK_NE_SW);
-	// AIRail.BuildRailTrack(location - AIMap.GetTileIndex(8,8), AIRail.RAILTRACK_NE_SW)
+	// local location = AIIndustry.GetLocation(industryList.Begin()) + AIMap.GetTileIndex(4, 4);
+	// industryList = AIIndustryList_CargoAccepting(Constants.INDUSTRY_POWER_STATION);
+	// industryList.Valuate(AIIndustry.GetDistanceManhattanToTile, location);
+	// industryList.KeepAboveValue(100);
+	// industryList.Sort(AIList.SORT_BY_VALUE, true);
+    // AILog.Info(AIIndustry.GetName(industryList.Begin()));
+	// //local secondLocation = AIIndustry.GetLocation(industryList.Begin()) - AIMap.GetTileIndex(4, 4);
+	// local secondLocation = location + AIMap.GetTileIndex(20, 0);
 
-	industryList = AIIndustryList_CargoAccepting(Constants.INDUSTRY_POWER_STATION);
-	industryList.Valuate(AIIndustry.GetDistanceManhattanToTile, location);
-	industryList.Sort(AIList.SORT_BY_VALUE, true);
-    AILog.Info(AIIndustry.GetName(industryList.Begin()));
-	local secondLocation = AIIndustry.GetLocation(industryList.Begin()) - AIMap.GetTileIndex(7, 7);
-	AILog.Info(location);
-	AILog.Info(secondLocation);
+	// AISign.BuildSign(location, "Start Coal");
+	// AISign.BuildSign(secondLocation, "End Coal");
 
-	/*
-	local pathfinder = RailPathFinder();
-	pathfinder.InitializePath([
-		[location, location + AIMap.GetTileIndex(-1, 0)]
-	], [
-		[secondLocation + AIMap.GetTileIndex(-1, 0), secondLocation]
-	]);
+	local location = AIMap.GetTileIndex(10,10);
+	local location2 = AIMap.GetTileIndex(200,50);
 
-    /*
 
-    local path = pathfinder.FindPath(-1);
-    AILog.Info(path);
+	AISign.BuildSign(location, "Location 1");
+	AISign.BuildSign(location2, "Location 2");
 
-	local prev = null;
-	local prevprev = null;
-	while (path != null) {
-		if (prevprev != null) {
-			if (AIMap.DistanceManhattan(prev, path.GetTile()) > 1) {
-				if (AITunnel.GetOtherTunnelEnd(prev) == path.GetTile()) {
-					AITunnel.BuildTunnel(AIVehicle.VT_RAIL, prev);
-				} else {
-					local bridge_list = AIBridgeList_Length(AIMap.DistanceManhattan(path.GetTile(), prev) + 1);
-					bridge_list.Valuate(AIBridge.GetMaxSpeed);
-					bridge_list.Sort(AIAbstractList.SORT_BY_VALUE, false);
-					AIBridge.BuildBridge(AIVehicle.VT_RAIL, bridge_list.Begin(), prev, path.GetTile());
-				}
-				prevprev = prev;
-				prev = path.GetTile();
-				path = path.GetParent();
-			} else {
-                AILog.Info("Bulidiiiing");
-				AIRail.BuildRail(prevprev, prev, path.GetTile());
-			}
-		}
-		if (path != null) {
-			prevprev = prev;
-			prev = path.GetTile();
-			path = path.GetParent();
-		}
-	}*/
+	Rails.PlanRail(location, location2);
 
-	Rails.BuildRail([location, location + AIMap.GetTileIndex(-1, 0)], [secondLocation + AIMap.GetTileIndex(-1, 0), secondLocation]);
+	// while (true) {
+	//   Rails.BuildRail([location, location + AIMap.GetTileIndex(-1, 0)], [secondLocation + AIMap.GetTileIndex(-1, 0), secondLocation]);
+	//   location = location + AIMap.GetTileIndex(20, 0);
+	//   secondLocation = secondLocation + AIMap.GetTileIndex(20, 0);
+	// }
 }

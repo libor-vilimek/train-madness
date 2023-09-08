@@ -1,5 +1,59 @@
+const WAYPOINT_LENGTH = 20;
+const WAYPOINT_LENGTH_DIAGONAL = 15;
+
 class Rails {
 
+}
+
+class Node {
+	iteration = 0;
+	x = -1;
+	y = -1;
+	tile = null;
+
+	constructor(x, y) {
+		this.x = x;
+		this.y = y;
+		tile = AIMap.GetTileIndex(x, y);
+	}
+}
+
+enum Direction {
+	LEFT = 0,
+		LEFT_TOP = 1,
+		TOP = 2,
+		TOP_RIGHT = 3,
+		RIGHT = 4,
+		RIGHT_DOWN = 5,
+		DOWN = 6,
+		DOWN_LEFT = 7
+}
+
+function Rails::DirectionChange(direction) {
+	if (direction == Direction.LEFT) {
+		return Node(WAYPOINT_LENGTH, 0);
+	}
+	if (direction == Direction.LEFT_TOP) {
+		return Node(WAYPOINT_LENGTH_DIAGONAL, -WAYPOINT_LENGTH_DIAGONAL);
+	}
+	if (direction == Direction.TOP) {
+		return Node(0, -WAYPOINT_LENGTH);
+	}
+	if (direction == Direction.TOP_RIGHT) {
+		return Node(-WAYPOINT_LENGTH_DIAGONAL, -WAYPOINT_LENGTH_DIAGONAL);
+	}
+	if (direction == Direction.RIGHT) {
+		return Node(-WAYPOINT_LENGTH, 0);
+	}
+	if (direction == Direction.RIGHT_DOWN) {
+		return Node(-WAYPOINT_LENGTH_DIAGONAL, WAYPOINT_LENGTH_DIAGONAL);
+	}
+	if (direction == Direction.DOWN) {
+		return Node(0, WAYPOINT_LENGTH);
+	}
+	if (direction == Direction.DOWN_LEFT) {
+		return Node(WAYPOINT_LENGTH_DIAGONAL, WAYPOINT_LENGTH_DIAGONAL);
+	}
 }
 
 /**
@@ -8,103 +62,123 @@ class Rails {
  * @param head2 The ending points of the rail line.
  * @return True if the construction succeeded.
  */
-function Rails::BuildRail(head1, head2)
-{
+function Rails::BuildRail(head1, head2) {
 	local pathfinder = RailPathFinder();
-	// Set some pathfinder penalties
-	// pathfinder._cost_level_crossing = 900;
-	pathfinder._cost_slope = 200;
-	pathfinder._cost_coast = 100;
-	pathfinder._cost_bridge_per_tile = 75;
-	pathfinder._cost_tunnel_per_tile = 50;
-	pathfinder._max_bridge_length = 20;
-	pathfinder._max_tunnel_length = 20;
 	pathfinder.InitializePath([head1], [head2]);
 	AILog.Info("Pathfinding...");
-	local counter = 0;
-	local path = false;
-	// Try to find a path
-	while (path == false && counter < 150) {
-		path = pathfinder.FindPath(150);
-		counter++;
-		AIController.Sleep(1);
-	}
-	if (path != null && path != false) {
-		AILog.Info("Path found. (" + counter + ")");
-	} else {
-		AILog.Warning("Pathfinding failed.");
-		return false;
-	}
+	local path = pathfinder.FindPath(1000);
+	AILog.Info("Path Found: " + path);
 	local prev = null;
 	local prevprev = null;
-	local pp1, pp2, pp3 = null;
-	while (path != null) {
+	while (path != null && path != false) {
 		if (prevprev != null) {
 			if (AIMap.DistanceManhattan(prev, path.GetTile()) > 1) {
-				// If we are building a tunnel or a bridge
 				if (AITunnel.GetOtherTunnelEnd(prev) == path.GetTile()) {
-					// If we are building a tunnel
-					if (!AITunnel.BuildTunnel(AIVehicle.VT_RAIL, prev)) {
-						AILog.Info("An error occured while I was building the rail: " + AIError.GetLastErrorString());
-						if (AIError.GetLastError() == AIError.ERR_NOT_ENOUGH_CASH) {
-							AILog.Warning("That tunnel would be too expensive. Construction aborted.");
-							return false;
-						}
-						// Try again if we have the money
-						if (!cBuilder.RetryRail(prevprev, pp1, pp2, pp3, head1)) return false;
-						else return true;
-					}
+					AITunnel.BuildTunnel(AIVehicle.VT_RAIL, prev);
 				} else {
-					// If we are building a bridge
-					local bridgelist = AIBridgeList_Length(AIMap.DistanceManhattan(path.GetTile(), prev) + 1);
-					bridgelist.Valuate(AIBridge.GetMaxSpeed);
-					if (!AIBridge.BuildBridge(AIVehicle.VT_RAIL, bridgelist.Begin(), prev, path.GetTile())) {
-						AILog.Info("An error occured while I was building the rail: " + AIError.GetLastErrorString());
-						if (AIError.GetLastError() == AIError.ERR_NOT_ENOUGH_CASH) {
-							AILog.Warning("That bridge would be too expensive. Construction aborted.");
-							return false;
-						}
-						// Try again if we have the money
-						if (!cBuilder.RetryRail(prevprev, pp1, pp2, pp3, head1)) return false;
-						else return true;
-					} else {
-						// Register the new bridge
-						root.railbridges.AddTile(path.GetTile());
-					}
+					local bridge_list = AIBridgeList_Length(AIMap.DistanceManhattan(path.GetTile(), prev) + 1);
+					bridge_list.Valuate(AIBridge.GetMaxSpeed);
+					bridge_list.Sort(AIList.SORT_BY_VALUE, false);
+					AIBridge.BuildBridge(AIVehicle.VT_RAIL, bridge_list.Begin(), prev, path.GetTile());
 				}
-				// Step these variables after a tunnel or bridge was built
-				pp3 = pp2;
-				pp2 = pp1;
-				pp1 = prevprev;
 				prevprev = prev;
 				prev = path.GetTile();
 				path = path.GetParent();
 			} else {
-				// If we are building a piece of rail track
-				if (!AIRail.BuildRail(prevprev, prev, path.GetTile())) {
-					AILog.Info("An error occured while I was building the rail: " + AIError.GetLastErrorString());
-					if (!cBuilder.RetryRail(prevprev, pp1, pp2, pp3, head1)) return false;
-					else return true;
-				}
+				AIRail.BuildRail(prevprev, prev, path.GetTile());
 			}
 		}
-		// Step these variables at the start of the construction
 		if (path != null) {
-			pp3 = pp2;
-			pp2 = pp1;
-			pp1 = prevprev;
 			prevprev = prev;
 			prev = path.GetTile();
 			path = path.GetParent();
 		}
-		// Check if we still have the money
-		/*
-		if (AICompany.GetBankBalance(AICompany.COMPANY_SELF) < (AICompany.GetLoanInterval() + Banker.GetMinimumCashNeeded())) {
-			if (!Banker.GetMoney(AICompany.GetLoanInterval())) {
-				AILog.Warning("I don't have enough money to complete the route.");
-				return false;
-			}
-		}*/
 	}
-	return true;
+}
+
+function Rails::PlanRail(position1, position2) {
+	local tile1x = AIMap.GetTileX(position1);
+	local tile1y = AIMap.GetTileY(position1);
+	local tile2x = AIMap.GetTileX(position2);
+	local tile2y = AIMap.GetTileX(position2);
+
+	local distance = abs(tile1x - tile2x) + abs(tile1y - tile2y);
+	AILog.Info(distance);
+
+	local root = Node(tile1x, tile1y);
+	local fullPath = [root];
+	local actual = root;
+	local next = null;
+	AISign.BuildSign(root.tile, "ROOT");
+
+	while (distance > 0) {
+		next = actual;
+		actual = Node(actual.x + 20, actual.y);
+		local possibilities = Rails.BuildableAround(actual.x, actual.y);
+		if (possibilities.Count() == 0) {
+			AILog.Info("We are doomed");
+		}
+		local possibility = possibilities.Begin();
+
+		fullPath.push(actual);
+		AISign.BuildSign(actual.tile, "Node " + fullPath.len());
+
+		local pathfinder = RailPathFinder();
+		pathfinder.InitializePath([
+			[actual.tile, actual.tile + AIMap.GetTileIndex(-1, 0)]
+		], [
+			[next.tile, next.tile + AIMap.GetTileIndex(-1, 0)]
+		]);
+		AILog.Info("Pathfinding...");
+		local path = pathfinder.FindPath(1000);
+		AILog.Info("Found path");
+	}
+}
+
+function Rails::BuildableAround(x, y, radius = 1) {
+	local tile = AIMap.GetTileIndex(x, y);
+	local list = AITileList();
+	list.AddRectangle(tile + AIMap.GetTileIndex(radius, radius), tile - AIMap.GetTileIndex(radius, radius));
+	list.Valuate(AITile.IsBuildable);
+	list.KeepValue(1);
+	foreach(buildableTile, value in list) {
+		AISign.BuildSign(buildableTile, "YES")
+	}
+	return list;
+}
+
+function Rails::NextNodePosition(from, to) {
+	local coreDirection = Rails.MainDirection(from, to);
+	local nextDirection = from.iteration;
+	local howmuch = (from.iteration / 2).tointeger();
+	if (from.iteration % 2 == 0) {
+		nextDirection = coreDirection + howmuch + 1;
+	} else {
+		nextDirection = coreDirection - howmuch;
+	}
+}
+
+function Rails::NextNodeByDirection(node, direction) {
+	if (direction == Direction.LEFT) {
+		return Node(node.x + 20, node.y)
+	}
+}
+
+function Rails::MainDirection(from, to) {
+	xDiffers = abs(from.x - to.x);
+	yDiffers = abs(from.y - to.y);
+
+	if (xDiffers > yDiffers) {
+		if (from.x < to.x) {
+			return Direction.LEFT;
+		} else {
+			return Direction.RIGHT;
+		}
+	} else {
+		if (from.y < to.y) {
+			return Direction.DOWN;
+		} else {
+			return Direction.TOP;
+		}
+	}
 }
