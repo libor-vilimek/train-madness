@@ -131,7 +131,7 @@ function Rails::PlanRail(position1, position2) {
 	local tile1x = AIMap.GetTileX(position1);
 	local tile1y = AIMap.GetTileY(position1);
 	local tile2x = AIMap.GetTileX(position2);
-	local tile2y = AIMap.GetTileX(position2);
+	local tile2y = AIMap.GetTileY(position2);
 
 	local distance = abs(tile1x - tile2x) + abs(tile1y - tile2y);
 	AILog.Info(distance);
@@ -193,7 +193,8 @@ function Rails::PlanRail(position1, position2) {
 
 function Rails::NextNodePosition(from, to) {
 	local coreDirection = Rails.MainDirection(from, to);
-	local nextDirection = from.iteration;
+	AILog.Info("Core direction is: " + coreDirection);
+	local nextDirection = null;
 	local howmuch = (from.iteration / 2).tointeger();
 	if (from.iteration % 2 == 0) {
 		nextDirection = (coreDirection - howmuch + 8) % 8;
@@ -201,6 +202,7 @@ function Rails::NextNodePosition(from, to) {
 		nextDirection = (coreDirection + howmuch + 1) % 8;
 	}
 
+	AILog.Info("Next direction is: " + nextDirection);
 	local change = Rails.DirectionChange(nextDirection);
 	return Node(from.x + change.x, from.y + change.y);
 }
@@ -208,6 +210,7 @@ function Rails::NextNodePosition(from, to) {
 function Rails::MainDirection(from, to) {
 	local xDiffers = abs(from.x - to.x);
 	local yDiffers = abs(from.y - to.y);
+	AILog.Info("xDiffers: " + xDiffers + " and yDiffers: " + yDiffers);
 
 	if (xDiffers > yDiffers) {
 		if (from.x < to.x) {
