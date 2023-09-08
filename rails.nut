@@ -99,6 +99,25 @@ function Rails::DirectionChange(direction) {
 // 	}
 // }
 
+function Rails::RemoveRail(path) {
+	local prev = null;
+	local prevprev = null;
+	while (path != null && path != false) {
+		if (prevprev != null) {
+			if (AIMap.DistanceManhattan(prev, path.GetTile()) > 1) {
+
+			} else {
+				AIRail.RemoveRail(prevprev, prev, path.GetTile());
+			}
+		}
+		if (path != null) {
+			prevprev = prev;
+			prev = path.GetTile();
+			path = path.GetParent();
+		}
+	}
+}
+
 function Rails::BuildRail(path) {
 	local prev = null;
 	local prevprev = null;
@@ -149,7 +168,9 @@ function Rails::PlanRail(position1, position2) {
 		if (actual.iteration >= 8) {
 			AILog.Info("Removing from the path");
 			fullPath.pop();
-			// paths.pop();
+			local removePath = paths.pop();
+			Rails.RemoveRail(removePath);
+
 			if (fullPath.len() == 0) {
 				AILog.Info("Cancelling - path was not found")
 				break;
