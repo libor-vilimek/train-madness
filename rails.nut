@@ -1,5 +1,6 @@
 const WAYPOINT_LENGTH = 20;
-const WAYPOINT_LENGTH_DIAGONAL = 15;
+const WAYPOINT_LENGTH_DIAGONAL = 12;
+const MAX_PAHTFINDING_TIME = 1500;
 
 class Rails {
 
@@ -168,16 +169,17 @@ function Rails::PlanRail(position1, position2) {
 		if (actual.iteration >= 8) {
 			AILog.Info("Removing from the path");
 			fullPath.pop();
-			local removePath = paths.pop();
-			Rails.RemoveRail(removePath);
-
 			if (fullPath.len() == 0) {
 				AILog.Info("Cancelling - path was not found")
 				break;
 			}
+			local removePath = paths.pop();
+			Rails.RemoveRail(removePath);
+
 			actual = actual.parentNode;
 			continue;
 		}
+
 		local nextPos = Rails.NextNodePosition(actual, target)
 		AISign.BuildSign(nextPos.tile, "PossibleNode: " + fullPath.len());
 		actual.iteration += 1;
@@ -195,7 +197,7 @@ function Rails::PlanRail(position1, position2) {
 			[possibility, possibility + AIMap.GetTileIndex(1, 0)]
 		]);
 		AILog.Info("Pathfinding...");
-		local path = pathfinder.FindPath(2000);
+		local path = pathfinder.FindPath(MAX_PAHTFINDING_TIME);
 		if (path != false && path != null) {
 			AILog.Info("Found path");
 			paths.push(path);

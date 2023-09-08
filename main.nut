@@ -73,8 +73,8 @@ function TrainMadness::FindIndustryRoute() {
 	// AISign.BuildSign(location, "Start Coal");
 	// AISign.BuildSign(secondLocation, "End Coal");
 
-	local location = AIMap.GetTileIndex(10,10);
-	local location2 = AIMap.GetTileIndex(500,50);
+	local location = AIMap.GetTileIndex(10,50);
+	local location2 = AIMap.GetTileIndex(1000,50);
 
 
 	AISign.BuildSign(location, "Location 1");
