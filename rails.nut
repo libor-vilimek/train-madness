@@ -17,6 +17,7 @@ class Node {
 		this.y = y;
 		this.tile = AIMap.GetTileIndex(x, y);
 		this.parentNode = parentNode;
+		this.iteration = 0;
 	}
 }
 
@@ -151,6 +152,7 @@ function Rails::PlanRail(position1, position2) {
 			// paths.pop();
 			if (fullPath.len() == 0) {
 				AILog.Info("Cancelling - path was not found")
+				break;
 			}
 			actual = actual.parentNode;
 			continue;
@@ -186,9 +188,9 @@ function Rails::PlanRail(position1, position2) {
 		}
 	}
 
-	foreach(path, value in paths) {
-		Rails.BuildRail(path);
-	}
+	// foreach(path, value in paths) {
+	// 	Rails.BuildRail(path);
+	// }
 }
 
 function Rails::NextNodePosition(from, to) {
