@@ -1,7 +1,9 @@
 import("pathfinder.rail", "RailPathFinder", 1);
-require("constants.nut");
+import("queue.priority_queue", "PriorityQueue", 2);
+require("helpers/constants.nut");
 require("helper.nut");
 require("rails.nut");
+require("manager.nut");
 
 /**
  * This is very simple AI that was written while I was ill due to having covid-19.
@@ -9,6 +11,7 @@ require("rails.nut");
  * It will try to spread to all cities with buses alone.
  */
 class TrainMadness extends AIController {
+	manager = Manager();
 	constructor() {
 		local railTypes = AIRailTypeList();
 		foreach(railType, value in railTypes) {
@@ -30,28 +33,9 @@ function TrainMadness::Start() {
 	AICompany.SetLoanAmount(AICompany.GetMaxLoanAmount());
 	AILog.Info("Starting");
 
-	this.FindIndustryRoute();
-
-	/*
-
-	local townlist = AITownList();
-	townlist.Valuate(AITown.GetPopulation);
-	townlist.Sort(AIList.SORT_BY_VALUE, false);
-	foreach (town, value in townlist) {
-	    // AILog.Info(town);
-	    local location = AITown.GetLocation(town);
-	    local list = AITileList();
-	    list.AddRectangle(location - AIMap.GetTileIndex(16, 16), location + AIMap.GetTileIndex(16, 16));
-	    foreach (tile, value in list) {
-	        //AILog.Info("building tile, yeaaa");
-	        //AILog.Info(AIRail.BuildRailTrack(tile, AIRail.RAILTRACK_NE_SW ));
-	    }
-	}
-
-	*/
-
 	while (true) {
-		this.Sleep(10);
+		manager.Next();
+		this.Sleep(1);
 	}
 }
 
@@ -80,7 +64,7 @@ function TrainMadness::FindIndustryRoute() {
 	AISign.BuildSign(location, "Location 1");
 	AISign.BuildSign(location2, "Location 2");
 
-	Rails.PlanRail(location, location2);
+	// Rails.PlanRail(location, location2);
 
 	// while (true) {
 	//   Rails.BuildRail([location, location + AIMap.GetTileIndex(-1, 0)], [secondLocation + AIMap.GetTileIndex(-1, 0), secondLocation]);
