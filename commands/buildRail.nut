@@ -1,7 +1,3 @@
-require("command.nut");
-require("../rails.nut");
-require("../helpers/log.nut");
-
 class BuildRail extends Command {
     manager = null;
 

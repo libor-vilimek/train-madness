@@ -1,8 +1,3 @@
-require("command.nut");
-require("buildRail.nut");
-require("../helpers/log.nut");
-require("../helpers/constants.nut");
-
 class FindPriority extends Command {
     manager = null;
 

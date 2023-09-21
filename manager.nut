@@ -1,5 +1,3 @@
-require("commands/findPriority.nut");
-
 class Manager {
 	_queue = null;
 

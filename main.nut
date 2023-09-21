@@ -1,9 +1,21 @@
 import("pathfinder.rail", "RailPathFinder", 1);
 import("queue.priority_queue", "PriorityQueue", 2);
-require("helpers/constants.nut");
-require("helper.nut");
-require("rails.nut");
+
 require("manager.nut");
+require("helper.nut");
+
+require("helpers/constants.nut");
+require("helpers/log.nut");
+
+require("commands/command.nut");
+require("commands/buildRail.nut");
+require("commands/findPriority.nut");
+require("commands/findRailOption.nut");
+
+require("rails/rails.nut");
+require("rails/railManager.nut");
+
+
 
 /**
  * This is very simple AI that was written while I was ill due to having covid-19.

@@ -1,5 +1,3 @@
-require("constants.nut");
-
 class Log {}
 
 function Log::Debug(message) {
