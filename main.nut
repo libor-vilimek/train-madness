@@ -10,7 +10,7 @@ require("helpers/log.nut");
 require("commands/command.nut");
 require("commands/buildRail.nut");
 require("commands/findPriority.nut");
-require("commands/findRailOption.nut");
+require("commands/findIndustryRouteForRail.nut");
 
 require("rails/rails.nut");
 require("rails/railManager.nut");

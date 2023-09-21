@@ -1,5 +1,6 @@
 class Manager {
 	_queue = null;
+    _industryRoutes = [];
 
     constructor() {
         _queue = PriorityQueue();
@@ -17,4 +18,12 @@ function Manager::Next() {
 
 function Manager::InsertCommand(command, priority) {
 	this._queue.Insert(command, priority);
+}
+
+function Manager::AddNewIndustryRoute(industryRoute) {
+    _industryRoutes.push(industryRoute);
+}
+
+function Manager::GetIndustryRoutes() {
+    return this._industryRoutes;
 }
