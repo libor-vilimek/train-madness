@@ -27,5 +27,5 @@ function FindIndustryRouteForRail::FindIndustryRoute() {
     local consumerId = industryList.Begin();
     Log.Debug("Found Power Station for the Coal Mine: " + AIIndustry.GetName(consumerId));
 
-    return [providerId, consumerId];
+    return {providerId = providerId, consumerId = consumerId};
 }

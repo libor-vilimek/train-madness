@@ -1,16 +1,16 @@
 class FindPriority extends Command {
-	manager = null;
+	_manager = null;
 
 	constructor(manager) {
-		this.manager = manager;
+		this._manager = manager;
 	}
 }
 
 function FindPriority::Execute() {
 	Log.Debug("Finding new priority as command");
-	if (this.manager.GetIndustryRoutes().len() == 0) {
-		this.manager.InsertCommand(FindIndustryRouteForRail(this.manager), Constants.LOW_QUEUE_PRIORITY);
+	if (this._manager.GetIndustryRoutes().len() == 0) {
+		this._manager.InsertCommand(FindIndustryRouteForRail(this._manager), Constants.DEFAULT_QUEUE_PRIORITY);
 	} else {
-        this.manager.InsertCommand(BuildRail(this.manager), Constants.LOW_QUEUE_PRIORITY);
+        this._manager.InsertCommand(BuildRail(this._manager), Constants.LOW_QUEUE_PRIORITY);
 	}
 }

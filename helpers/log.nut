@@ -11,3 +11,15 @@ function Log::Info(message) {
         AILog.Info(message);
     }
 }
+
+function Log::CreateSigns(locations, text, debugType = null) {
+    foreach(location, value in locations) {
+        Log.CreateSign(location, text, debugType);
+    }
+}
+
+function Log::CreateSign(location, text, debugType = null) {
+    if (Constants.IsDebugEnabled(debugType)) {
+        AISign.BuildSign(location, text);
+    }
+}
