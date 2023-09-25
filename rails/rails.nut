@@ -201,7 +201,7 @@ function Rails::PlanRail(position1, position2) {
 		if (path != false && path != null) {
 			AILog.Info("Found path");
 			paths.push(path);
-			local newNode = Node(AIMap.GetTileX(possibility)+ AIMap.GetTileIndex(1, 0), AIMap.GetTileY(possibility), actual);
+			local newNode = Node(AIMap.GetTileX(possibility) + AIMap.GetTileIndex(1, 0), AIMap.GetTileY(possibility), actual);
 			AISign.BuildSign(newNode.tile, "Node: " + fullPath.len());
 			fullPath.push(newNode);
 			actual = newNode;
