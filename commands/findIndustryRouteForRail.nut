@@ -19,9 +19,9 @@ function FindIndustryRouteForRail::FindIndustryRoute() {
 	local providerLocation = AIIndustry.GetLocation(providerId);
     Log.Debug("Found Coal Mine: " + AIIndustry.GetName(providerId));
 
-	industryList = AIIndustryList_CargoAccepting(Constants.INDUSTRY_POWER_STATION);
+	industryList = AIIndustryList_CargoAccepting(Constants.CARGO_COAL);
 	industryList.Valuate(AIIndustry.GetDistanceManhattanToTile, providerLocation);
-	industryList.KeepAboveValue(200);
+	industryList.KeepAboveValue(100);
 	industryList.Sort(AIList.SORT_BY_VALUE, true);
 
     local consumerId = industryList.Begin();

@@ -25,8 +25,14 @@ function RailManager::Next() {
     }
 }
 
-function RailManager::BuildStations(industryStart, industryEnd) {
-    local firstLocation = AIIndustry.GetLocation(industryStart);
-    local possibleLocations = AITileList_IndustryProducing(industryStart, 4);
-    Log.CreateSigns(possibleLocations, "Start Station Here", DEBUG_TYPE.BUILDING_STATION);
+function RailManager::BuildStations(industryProduce, industryAccept) {
+    local industryProduceLocation = AIIndustry.GetLocation(industryProduce);
+    local possibleLocationsProduce = AITileList_IndustryProducing(industryProduce, 4);
+    // Log.CreateSigns(possibleLocationsProduce, "Start Station Here", DEBUG_TYPE.BUILDING_STATION);
+    local result = AIRail.BuildRailStation(possibleLocationsProduce.Begin(), AIRail.RAILTRACK_NW_SE, 1, 1, AIStation.STATION_NEW);
+    AILog.Info(result);
+
+
+    local possibleLocationsAccept = AITileList_IndustryAccepting(industryAccept, 4);
+    Log.CreateSigns(possibleLocationsAccept, "End Station Here", DEBUG_TYPE.BUILDING_STATION);
 }
