@@ -66,6 +66,7 @@ function RailManager::BuildStations(industryProduce, industryAccept) {
             local rail2 = AIRail.BuildRailTrack(location + AIMap.GetTileIndex(-1, 0), AIRail.RAILTRACK_NE_SW);
 
             startLocation = location + AIMap.GetTileIndex(7, 0);
+            Log.CreateSign(startLocation, "Rail starting from here: " + startLocation, DEBUG_TYPE.BUILDING_STATION);
             break;
         }
 	}
@@ -79,20 +80,17 @@ function RailManager::BuildStations(industryProduce, industryAccept) {
 	foreach(location, value in possibleLocationsAccept) {
         local result = AIRail.BuildRailStation(location, AIRail.RAILTRACK_NE_SW, 1, 7, AIStation.STATION_NEW);
         Log.CreateSign(location, "Trying station here: " + result, DEBUG_TYPE.BUILDING_STATION);
-        local depot = AIRail.BuildRailDepot(location + AIMap.GetTileIndex(-2, 0), location + AIMap.GetTileIndex(-1, 0));
-        Log.CreateSign(location + AIMap.GetTileIndex(-2, 0), "Trying depot here: " + depot, DEBUG_TYPE.BUILDING_STATION);
         local rail1 = AIRail.BuildRailTrack(location + AIMap.GetTileIndex(7, 0), AIRail.RAILTRACK_NE_SW);
         local rail2 = AIRail.BuildRailTrack(location + AIMap.GetTileIndex(-1, 0), AIRail.RAILTRACK_NE_SW);
         local rail3 = AIRail.BuildRailTrack(location + AIMap.GetTileIndex(8, 0), AIRail.RAILTRACK_NE_SW);
+        local rail4 = AIRail.BuildRailTrack(location + AIMap.GetTileIndex(-2, 0), AIRail.RAILTRACK_NE_SW);
 
-        if (result && depot && rail1 && rail2 && rail3) {
+        if (result && rail1 && rail2 && rail3 && rail4) {
             startTest = null;
             local result = AIRail.BuildRailStation(location, AIRail.RAILTRACK_NE_SW, 1, 7, AIStation.STATION_NEW);
             Log.CreateSign(location, "Building station here", DEBUG_TYPE.BUILDING_STATION);
-            local depot = AIRail.BuildRailDepot(location + AIMap.GetTileIndex(-2, 0), location + AIMap.GetTileIndex(-1, 0));
-            Log.CreateSign(location + AIMap.GetTileIndex(-2, 0), "Building depot here", DEBUG_TYPE.BUILDING_STATION);
-            endLocation = location + AIMap.GetTileIndex(7, 0);
-            local rail2 = AIRail.BuildRailTrack(location + AIMap.GetTileIndex(-1, 0), AIRail.RAILTRACK_NE_SW);
+            endLocation = location + AIMap.GetTileIndex(-1, 0);
+            Log.CreateSign(endLocation, "Rail ending in here: " + endLocation, DEBUG_TYPE.BUILDING_STATION);
             break;
         }
 	}

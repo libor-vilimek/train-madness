@@ -180,15 +180,18 @@ function Rails::PlanRail(position1, position2) {
 			continue;
 		}
 
-		local nextPos = Rails.NextNodePosition(actual, target)
-		AISign.BuildSign(nextPos.tile, "PossibleNode: " + fullPath.len());
-		actual.iteration += 1;
-		local possibilities = Rails.BuildableAround(nextPos.x, nextPos.y);
-		if (possibilities.Count() == 0) {
-			AILog.Info("No possibilities, skipping");
-			continue;
+		local possibility = target.tile;
+		if (AITile.GetDistanceManhattanToTile(actual.tile, target.tile) > 35) {
+			local nextPos = Rails.NextNodePosition(actual, target)
+			AISign.BuildSign(nextPos.tile, "PossibleNode: " + fullPath.len());
+			actual.iteration += 1;
+			local possibilities = Rails.BuildableAround(nextPos.x, nextPos.y);
+			if (possibilities.Count() == 0) {
+				AILog.Info("No possibilities, skipping");
+				continue;
+			}
+			possibility = possibilities.Begin();
 		}
-		local possibility = possibilities.Begin();
 
 		local pathfinder = RailPathFinder();
 		pathfinder.InitializePath([
@@ -206,6 +209,10 @@ function Rails::PlanRail(position1, position2) {
 			fullPath.push(newNode);
 			actual = newNode;
 			Rails.BuildRail(path);
+			if (possibility == target.tile) {
+				Log.Debug("Finishing the route");
+				break;
+			}
 		} else {
 			AILog.Info("Path not found");
 		}
