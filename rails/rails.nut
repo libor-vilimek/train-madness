@@ -33,6 +33,34 @@ enum Direction {
 		DOWN_LEFT = 7
 }
 
+
+function Rails::DirectionToNode(direction) {
+	if (direction == Direction.LEFT) {
+		return Node(1, 0);
+	}
+	if (direction == Direction.LEFT_TOP) {
+		return Node(1, -1);
+	}
+	if (direction == Direction.TOP) {
+		return Node(0, -1);
+	}
+	if (direction == Direction.TOP_RIGHT) {
+		return Node(-1, -1);
+	}
+	if (direction == Direction.RIGHT) {
+		return Node(-1, 0);
+	}
+	if (direction == Direction.RIGHT_DOWN) {
+		return Node(-1, 1);
+	}
+	if (direction == Direction.DOWN) {
+		return Node(0, 1);
+	}
+	if (direction == Direction.DOWN_LEFT) {
+		return Node(1, 1);
+	}
+}
+
 function Rails::DirectionChange(direction) {
 	if (direction == Direction.LEFT) {
 		return Node(WAYPOINT_LENGTH, 0);
@@ -58,6 +86,8 @@ function Rails::DirectionChange(direction) {
 	if (direction == Direction.DOWN_LEFT) {
 		return Node(WAYPOINT_LENGTH_DIAGONAL, WAYPOINT_LENGTH_DIAGONAL);
 	}
+
+	AILog.Info("Direction is: " + direction);
 }
 
 /**
@@ -122,6 +152,7 @@ function Rails::RemoveRail(path) {
 function Rails::BuildRail(path) {
 	local prev = null;
 	local prevprev = null;
+
 	while (path != null && path != false) {
 		if (prevprev != null) {
 			if (AIMap.DistanceManhattan(prev, path.GetTile()) > 1) {
@@ -146,6 +177,10 @@ function Rails::BuildRail(path) {
 			path = path.GetParent();
 		}
 	}
+
+	AILog.Info("prev: " + prev + " and prevprev: " + prevprev);
+	AISign.BuildSign(prev, "prev");
+	AISign.BuildSign(prevprev, "prevprev2");
 }
 
 function Rails::PlanRail(position1, position2) {
@@ -163,6 +198,7 @@ function Rails::PlanRail(position1, position2) {
 	local fullPath = [root];
 	local actual = root;
 	local next = null;
+	local lastRailTile = actual.tile + AIMap.GetTileIndex(-1, 0);
 	AISign.BuildSign(root.tile, "ROOT");
 
 	while (paths.len() < 100) {
@@ -181,8 +217,10 @@ function Rails::PlanRail(position1, position2) {
 		}
 
 		local possibility = target.tile;
+		local direction = null;
 		if (AITile.GetDistanceManhattanToTile(actual.tile, target.tile) > 35) {
-			local nextPos = Rails.NextNodePosition(actual, target)
+			local nextPos = Rails.NextNodePosition(actual, target).node;
+			direction = Rails.NextNodePosition(actual, target).direction;
 			AISign.BuildSign(nextPos.tile, "PossibleNode: " + fullPath.len());
 			actual.iteration += 1;
 			local possibilities = Rails.BuildableAround(nextPos.x, nextPos.y);
@@ -194,17 +232,23 @@ function Rails::PlanRail(position1, position2) {
 		}
 
 		local pathfinder = RailPathFinder();
+
+		AISign.BuildSign(lastRailTile, "Last Rail Tile");
+		AISign.BuildSign(actual.tile + AIMap.GetTileIndex(-1, 0), "Actual -1")
 		pathfinder.InitializePath([
-			[actual.tile, actual.tile + AIMap.GetTileIndex(-1, 0)]
+			[possibility, possibility + Rails.DirectionToNode(direction).tile]
 		], [
-			[possibility, possibility + AIMap.GetTileIndex(1, 0)]
+			[actual.tile, lastRailTile]
 		]);
+
+		lastRailTile = possibility;
+
 		AILog.Info("Pathfinding...");
 		local path = pathfinder.FindPath(MAX_PAHTFINDING_TIME);
 		if (path != false && path != null) {
 			AILog.Info("Found path");
 			paths.push(path);
-			local newNode = Node(AIMap.GetTileX(possibility) + AIMap.GetTileIndex(1, 0), AIMap.GetTileY(possibility), actual);
+			local newNode = Node(AIMap.GetTileX(possibility) + Rails.DirectionToNode(direction).tile, AIMap.GetTileY(possibility), actual);
 			AISign.BuildSign(newNode.tile, "Node: " + fullPath.len());
 			fullPath.push(newNode);
 			actual = newNode;
@@ -236,7 +280,7 @@ function Rails::NextNodePosition(from, to) {
 
 	AILog.Info("Next direction is: " + nextDirection);
 	local change = Rails.DirectionChange(nextDirection);
-	return Node(from.x + change.x, from.y + change.y);
+	return {node = Node(from.x + change.x, from.y + change.y), direction = nextDirection };
 }
 
 function Rails::MainDirection(from, to) {
