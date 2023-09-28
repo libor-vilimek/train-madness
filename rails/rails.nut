@@ -145,6 +145,7 @@ function Rails::PlanRail(position1, position2) {
 	local actual = root;
 	local next = null;
 	local lastRailTile = actual.tile + AIMap.GetTileIndex(-1, 0);
+	local lastDirection = 0;
 	AISign.BuildSign(root.tile, "ROOT");
 
 	while (paths.len() < 100) {
@@ -165,18 +166,16 @@ function Rails::PlanRail(position1, position2) {
 		local possibility = target.tile;
 		local direction = 0;
 		if (AITile.GetDistanceManhattanToTile(actual.tile, target.tile) > 35) {
-			local nextPos = Rails.NextNodePosition(actual, target).node;
-			direction = Rails.NextNodePosition(actual, target).direction;
-			AISign.BuildSign(nextPos.tile, "PossibleNode: " + fullPath.len());
+			local newNodeAndDirection = Rails.NextNodePosition(actual, target, lastDirection)
+			local nextPos = newNodeAndDirection.node;
+			direction = newNodeAndDirection.direction;
+			Log.CreateSign(nextPos.tile, "Next possible part of railway here");
 
 			possibility = Rails.BestTileToContinuePath(actual.tile, nextPos.tile, direction);
 		}
 
 		actual.iteration += 1;
 		local pathfinder = RailPathFinder();
-
-		AISign.BuildSign(lastRailTile, "Last Rail Tile");
-		AISign.BuildSign(actual.tile + AIMap.GetTileIndex(-1, 0), "Actual -1")
 		pathfinder.InitializePath([
 			[possibility, possibility + Rails.DirectionToNode(direction).tile]
 		], [
@@ -201,6 +200,7 @@ function Rails::PlanRail(position1, position2) {
 			fullPath.push(newNode);
 			actual = newNode;
 			Rails.BuildRail(path);
+			lastDirection = direction;
 			if (possibility == target.tile) {
 				Log.Debug("Finishing the route");
 				break;
@@ -211,23 +211,51 @@ function Rails::PlanRail(position1, position2) {
 	}
 }
 
-function Rails::NextNodePosition(from, to) {
-	local coreDirection = Rails.MainDirection(from, to);
-	AILog.Info("Core direction is: " + coreDirection);
+function Rails::NextNodePosition(from, to, currentDirection) {
 	local nextDirection = null;
-	local howmuch = (from.iteration / 2).tointeger();
-	if (from.iteration % 2 == 0) {
-		nextDirection = (coreDirection - howmuch + 8) % 8;
+
+	if (Rails.IsBeneficalToKeepDirection(from, to, currentDirection)) {
+		nextDirection = currentDirection;
 	} else {
-		nextDirection = (coreDirection + howmuch + 1) % 8;
+		local coreDirection = Rails.MainDirection(from, to);
+		Log.Info("Core direction is: " + coreDirection);
+		local howmuch = (from.iteration / 2).tointeger();
+		if (from.iteration % 2 == 0) {
+			nextDirection = (coreDirection - howmuch + 8) % 8;
+		} else {
+			nextDirection = (coreDirection + howmuch + 1) % 8;
+		}
 	}
 
-	AILog.Info("Next direction is: " + nextDirection);
+	Log.Info("Next direction is: " + nextDirection);
 	local change = Rails.DirectionChange(nextDirection);
 	return {
 		node = Node(from.x + change.x, from.y + change.y),
 		direction = nextDirection
 	};
+}
+
+function Rails::IsBeneficalToKeepDirection(from, to, direction) {
+	local xDiffers = abs(from.x - to.x);
+	local yDiffers = abs(from.y - to.y);
+
+	if (Rails.IsDirectionHorizontal(direction) && xDiffers < WAYPOINT_LENGTH) {
+		return false;
+	}
+
+	if (Rails.IsDirectionVertical(direction) && yDiffers < WAYPOINT_LENGTH) {
+		return false;
+	}
+
+	local change = Rails.DirectionChange(direction);
+	local xDiffers2 = abs(from.x + change.x);
+	local yDiffers2 = abs(from.y + change.y);
+
+	if ((xDiffers + yDiffers) - (xDiffers2 + yDiffers2) > WAYPOINT_LENGTH / 2) {
+		return true;
+	}
+
+	return false;
 }
 
 function Rails::MainDirection(from, to) {
@@ -264,8 +292,6 @@ function Rails::BestTileToContinuePath(actualTile, targetTile, direction, radius
 	local targetTileX = AIMap.GetTileX(targetTile);
 	local targetTileY = AIMap.GetTileY(targetTile);
 
-	AISign.BuildSign(targetTile, "ITS HEEERE")
-
 	local tiles = Rails.GetBuildableTilesAroundTile(targetTile, radius);
 	if (Rails.IsDirectionDiagonal(direction) == false) {
 		if (Rails.IsDirectionHorizontal(direction)) {
@@ -275,17 +301,21 @@ function Rails::BestTileToContinuePath(actualTile, targetTile, direction, radius
 			tiles.Valuate(AIMap.GetTileX);
 			Rails.ValuateEqualValueAsTrue(tiles, actualTileX);
 		}
+
 		tiles.Sort(AIList.SORT_BY_VALUE, false);
 	}
 
+	AILog.Info("Actual: " + actualTileX + "," + actualTileY);
 	foreach(tile, value in tiles) {
-	    AILog.Info(tile);
-		AILog.Info(tiles.GetValue(tile));
+		local tileX = AIMap.GetTileX(tile);
+		local tileY = AIMap.GetTileY(tile);
+		AILog.Info(tileX + "," + tileY + " have value " + tiles.GetValue(tile));
 	}
 
 	foreach(tile, value in tiles) {
 		local tileX = AIMap.GetTileX(tile);
 		local tileY = AIMap.GetTileY(tile);
+		AILog.Info(tileX + "," + tileY + " have value " + tiles.GetValue(tile));
 		local directionNode = Rails.DirectionToNode(direction);
 		local nextNodeInPath = Node(tileX + directionNode.x, tileY + directionNode.y);
 		if (AITile.IsBuildable(nextNodeInPath.tile)) {
@@ -295,11 +325,21 @@ function Rails::BestTileToContinuePath(actualTile, targetTile, direction, radius
 }
 
 function Rails::ValuateEqualValueAsTrue(list, val) {
+	local preferredValues = [];
+	local otherValues = [];
 	foreach(item, value in list) {
 		if (list.GetValue(item) == val) {
-			list.SetValue(item, 1);
+			preferredValues.push(item);
 		} else {
-			list.SetValue(item, 0);
+			otherValues.push(item);
 		}
+	}
+
+	//AIList does not work when setting values while iterating it
+	foreach(item in preferredValues) {
+		list.SetValue(item, 1);
+	}
+	foreach(item in otherValues) {
+		list.SetValue(item, 0);
 	}
 }
