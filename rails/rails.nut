@@ -1,6 +1,7 @@
 const WAYPOINT_LENGTH = 20;
-const WAYPOINT_LENGTH_DIAGONAL = 12;
-const MAX_PAHTFINDING_TIME = 1500;
+const WAYPOINT_LENGTH_DIAGONAL = 15;
+const MAX_PATHFINDING_TIME = 1500;
+const MAX_PATHFINDING_TIME_FINAL = 4500;
 
 class Rails {
 
@@ -61,74 +62,18 @@ function Rails::DirectionToNode(direction) {
 	}
 }
 
-function Rails::DirectionChange(direction) {
-	if (direction == Direction.LEFT) {
-		return Node(WAYPOINT_LENGTH, 0);
-	}
-	if (direction == Direction.LEFT_TOP) {
-		return Node(WAYPOINT_LENGTH_DIAGONAL, -WAYPOINT_LENGTH_DIAGONAL);
-	}
-	if (direction == Direction.TOP) {
-		return Node(0, -WAYPOINT_LENGTH);
-	}
-	if (direction == Direction.TOP_RIGHT) {
-		return Node(-WAYPOINT_LENGTH_DIAGONAL, -WAYPOINT_LENGTH_DIAGONAL);
-	}
-	if (direction == Direction.RIGHT) {
-		return Node(-WAYPOINT_LENGTH, 0);
-	}
-	if (direction == Direction.RIGHT_DOWN) {
-		return Node(-WAYPOINT_LENGTH_DIAGONAL, WAYPOINT_LENGTH_DIAGONAL);
-	}
-	if (direction == Direction.DOWN) {
-		return Node(0, WAYPOINT_LENGTH);
-	}
-	if (direction == Direction.DOWN_LEFT) {
-		return Node(WAYPOINT_LENGTH_DIAGONAL, WAYPOINT_LENGTH_DIAGONAL);
-	}
-
-	AILog.Info("Direction is: " + direction);
+function Rails::IsDirectionDiagonal(direction) {
+	return direction % 2 == 1;
 }
 
-/**
- * Build a rail line between two given points.
- * @param head1 The starting points of the rail line.
- * @param head2 The ending points of the rail line.
- * @return True if the construction succeeded.
- */
-// function Rails::BuildRail(head1, head2) {
-// 	local pathfinder = RailPathFinder();
-// 	pathfinder.InitializePath([head1], [head2]);
-// 	AILog.Info("Pathfinding...");
-// 	local path = pathfinder.FindPath(1000);
-// 	AILog.Info("Path Found: " + path);
-// 	local prev = null;
-// 	local prevprev = null;
-// 	while (path != null && path != false) {
-// 		if (prevprev != null) {
-// 			if (AIMap.DistanceManhattan(prev, path.GetTile()) > 1) {
-// 				if (AITunnel.GetOtherTunnelEnd(prev) == path.GetTile()) {
-// 					AITunnel.BuildTunnel(AIVehicle.VT_RAIL, prev);
-// 				} else {
-// 					local bridge_list = AIBridgeList_Length(AIMap.DistanceManhattan(path.GetTile(), prev) + 1);
-// 					bridge_list.Valuate(AIBridge.GetMaxSpeed);
-// 					bridge_list.Sort(AIList.SORT_BY_VALUE, false);
-// 					AIBridge.BuildBridge(AIVehicle.VT_RAIL, bridge_list.Begin(), prev, path.GetTile());
-// 				}
-// 				prevprev = prev;
-// 				prev = path.GetTile();
-// 				path = path.GetParent();
-// 			} else {
-// 				AIRail.BuildRail(prevprev, prev, path.GetTile());
-// 			}
-// 		}
-// 		if (path != null) {
-// 			prevprev = prev;
-// 			prev = path.GetTile();
-// 			path = path.GetParent();
-// 		}
-// 	}
-// }
+function Rails::DirectionChange(direction) {
+	local node = Rails.DirectionToNode(direction);
+	local multiply = WAYPOINT_LENGTH;
+	if (Rails.IsDirectionDiagonal(direction)) {
+		multiply = WAYPOINT_LENGTH_DIAGONAL;
+	}
+	return Node(node.x * multiply, node.y * multiply);
+}
 
 function Rails::RemoveRail(path) {
 	local prev = null;
@@ -177,10 +122,6 @@ function Rails::BuildRail(path) {
 			path = path.GetParent();
 		}
 	}
-
-	AILog.Info("prev: " + prev + " and prevprev: " + prevprev);
-	AISign.BuildSign(prev, "prev");
-	AISign.BuildSign(prevprev, "prevprev2");
 }
 
 function Rails::PlanRail(position1, position2) {
@@ -217,7 +158,7 @@ function Rails::PlanRail(position1, position2) {
 		}
 
 		local possibility = target.tile;
-		local direction = null;
+		local direction = 0;
 		if (AITile.GetDistanceManhattanToTile(actual.tile, target.tile) > 35) {
 			local nextPos = Rails.NextNodePosition(actual, target).node;
 			direction = Rails.NextNodePosition(actual, target).direction;
@@ -244,7 +185,13 @@ function Rails::PlanRail(position1, position2) {
 		lastRailTile = possibility;
 
 		AILog.Info("Pathfinding...");
-		local path = pathfinder.FindPath(MAX_PAHTFINDING_TIME);
+		local findingTime = MAX_PATHFINDING_TIME;
+		if (possibility == target.tile) {
+			findingTime = MAX_PATHFINDING_TIME_FINAL;
+		}
+
+		local path = pathfinder.FindPath(findingTime);
+
 		if (path != false && path != null) {
 			AILog.Info("Found path");
 			paths.push(path);
@@ -261,10 +208,6 @@ function Rails::PlanRail(position1, position2) {
 			AILog.Info("Path not found");
 		}
 	}
-
-	// foreach(path, value in paths) {
-	// 	Rails.BuildRail(path);
-	// }
 }
 
 function Rails::NextNodePosition(from, to) {
@@ -280,7 +223,10 @@ function Rails::NextNodePosition(from, to) {
 
 	AILog.Info("Next direction is: " + nextDirection);
 	local change = Rails.DirectionChange(nextDirection);
-	return {node = Node(from.x + change.x, from.y + change.y), direction = nextDirection };
+	return {
+		node = Node(from.x + change.x, from.y + change.y),
+		direction = nextDirection
+	};
 }
 
 function Rails::MainDirection(from, to) {
