@@ -66,6 +66,14 @@ function Rails::IsDirectionDiagonal(direction) {
 	return direction % 2 == 1;
 }
 
+function Rails::IsDirectionHorizontal(direction) {
+	return (direction == Direction.LEFT || direction == Direction.RIGHT);
+}
+
+function Rails::IsDirectionVertical(direction) {
+	return (direction == Direction.TOP || direction == Direction.DOWN);
+}
+
 function Rails::DirectionChange(direction) {
 	local node = Rails.DirectionToNode(direction);
 	local multiply = WAYPOINT_LENGTH;
@@ -130,9 +138,6 @@ function Rails::PlanRail(position1, position2) {
 	local tile2x = AIMap.GetTileX(position2);
 	local tile2y = AIMap.GetTileY(position2);
 
-	local distance = abs(tile1x - tile2x) + abs(tile1y - tile2y);
-	AILog.Info(distance);
-
 	local paths = [];
 	local root = Node(tile1x, tile1y);
 	local target = Node(tile2x, tile2y);
@@ -163,15 +168,11 @@ function Rails::PlanRail(position1, position2) {
 			local nextPos = Rails.NextNodePosition(actual, target).node;
 			direction = Rails.NextNodePosition(actual, target).direction;
 			AISign.BuildSign(nextPos.tile, "PossibleNode: " + fullPath.len());
-			actual.iteration += 1;
-			local possibilities = Rails.BuildableAround(nextPos.x, nextPos.y);
-			if (possibilities.Count() == 0) {
-				AILog.Info("No possibilities, skipping");
-				continue;
-			}
-			possibility = possibilities.Begin();
+
+			possibility = Rails.BestTileToContinuePath(actual.tile, nextPos.tile, direction);
 		}
 
+		actual.iteration += 1;
 		local pathfinder = RailPathFinder();
 
 		AISign.BuildSign(lastRailTile, "Last Rail Tile");
@@ -249,14 +250,56 @@ function Rails::MainDirection(from, to) {
 	}
 }
 
-function Rails::BuildableAround(x, y, radius = 1) {
-	local tile = AIMap.GetTileIndex(x, y);
+function Rails::GetBuildableTilesAroundTile(tile, radius = 2) {
 	local list = AITileList();
 	list.AddRectangle(tile + AIMap.GetTileIndex(radius, radius), tile - AIMap.GetTileIndex(radius, radius));
 	list.Valuate(AITile.IsBuildable);
 	list.KeepValue(1);
-	foreach(buildableTile, value in list) {
-		// AISign.BuildSign(buildableTile, "YES")
-	}
 	return list;
+}
+
+function Rails::BestTileToContinuePath(actualTile, targetTile, direction, radius = 2) {
+	local actualTileX = AIMap.GetTileX(actualTile);
+	local actualTileY = AIMap.GetTileY(actualTile);
+	local targetTileX = AIMap.GetTileX(targetTile);
+	local targetTileY = AIMap.GetTileY(targetTile);
+
+	AISign.BuildSign(targetTile, "ITS HEEERE")
+
+	local tiles = Rails.GetBuildableTilesAroundTile(targetTile, radius);
+	if (Rails.IsDirectionDiagonal(direction) == false) {
+		if (Rails.IsDirectionHorizontal(direction)) {
+			tiles.Valuate(AIMap.GetTileY);
+			Rails.ValuateEqualValueAsTrue(tiles, actualTileY);
+		} else {
+			tiles.Valuate(AIMap.GetTileX);
+			Rails.ValuateEqualValueAsTrue(tiles, actualTileX);
+		}
+		tiles.Sort(AIList.SORT_BY_VALUE, false);
+	}
+
+	foreach(tile, value in tiles) {
+	    AILog.Info(tile);
+		AILog.Info(tiles.GetValue(tile));
+	}
+
+	foreach(tile, value in tiles) {
+		local tileX = AIMap.GetTileX(tile);
+		local tileY = AIMap.GetTileY(tile);
+		local directionNode = Rails.DirectionToNode(direction);
+		local nextNodeInPath = Node(tileX + directionNode.x, tileY + directionNode.y);
+		if (AITile.IsBuildable(nextNodeInPath.tile)) {
+			return tile;
+		}
+	}
+}
+
+function Rails::ValuateEqualValueAsTrue(list, val) {
+	foreach(item, value in list) {
+		if (list.GetValue(item) == val) {
+			list.SetValue(item, 1);
+		} else {
+			list.SetValue(item, 0);
+		}
+	}
 }
