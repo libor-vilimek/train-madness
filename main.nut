@@ -12,6 +12,7 @@ require("commands/buildRail.nut");
 require("commands/findPriority.nut");
 require("commands/findIndustryRouteForRail.nut");
 
+require("rails/node.nut");
 require("rails/rails.nut");
 require("rails/railManager.nut");
 

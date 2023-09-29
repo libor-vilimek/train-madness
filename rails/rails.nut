@@ -1,26 +1,10 @@
-const WAYPOINT_LENGTH = 20;
-const WAYPOINT_LENGTH_DIAGONAL = 15;
+const WAYPOINT_LENGTH = 16;
+const WAYPOINT_LENGTH_DIAGONAL = 12;
 const MAX_PATHFINDING_TIME = 1500;
 const MAX_PATHFINDING_TIME_FINAL = 4500;
 
 class Rails {
 
-}
-
-class Node {
-	iteration = 0;
-	x = -1;
-	y = -1;
-	tile = null;
-	parentNode = null;
-
-	constructor(x, y, parentNode = null) {
-		this.x = x;
-		this.y = y;
-		this.tile = AIMap.GetTileIndex(x, y);
-		this.parentNode = parentNode;
-		this.iteration = 0;
-	}
 }
 
 enum Direction {
@@ -133,14 +117,9 @@ function Rails::BuildRail(path) {
 }
 
 function Rails::PlanRail(position1, position2) {
-	local tile1x = AIMap.GetTileX(position1);
-	local tile1y = AIMap.GetTileY(position1);
-	local tile2x = AIMap.GetTileX(position2);
-	local tile2y = AIMap.GetTileY(position2);
-
 	local paths = [];
-	local root = Node(tile1x, tile1y);
-	local target = Node(tile2x, tile2y);
+	local root = Node.CreateFromTile(position1);
+	local target = Node.CreateFromTile(position2);
 	local fullPath = [root];
 	local actual = root;
 	local next = null;
@@ -171,7 +150,7 @@ function Rails::PlanRail(position1, position2) {
 			direction = newNodeAndDirection.direction;
 			Log.CreateSign(nextPos.tile, "Next possible part of railway here");
 
-			possibility = Rails.BestTileToContinuePath(actual.tile, nextPos.tile, direction);
+			possibility = Rails.BestTileToContinuePath(actual, nextPos, direction);
 		}
 
 		actual.iteration += 1;
@@ -278,46 +257,37 @@ function Rails::MainDirection(from, to) {
 	}
 }
 
-function Rails::GetBuildableTilesAroundTile(tile, radius = 2) {
+function Rails::GetBuildableTilesAroundNode(node, radius = 2) {
 	local list = AITileList();
-	list.AddRectangle(tile + AIMap.GetTileIndex(radius, radius), tile - AIMap.GetTileIndex(radius, radius));
+	list.AddRectangle(node.tile + AIMap.GetTileIndex(radius, radius), node.tile - AIMap.GetTileIndex(radius, radius));
 	list.Valuate(AITile.IsBuildable);
 	list.KeepValue(1);
 	return list;
 }
 
-function Rails::BestTileToContinuePath(actualTile, targetTile, direction, radius = 2) {
-	local actualTileX = AIMap.GetTileX(actualTile);
-	local actualTileY = AIMap.GetTileY(actualTile);
-	local targetTileX = AIMap.GetTileX(targetTile);
-	local targetTileY = AIMap.GetTileY(targetTile);
-
-	local tiles = Rails.GetBuildableTilesAroundTile(targetTile, radius);
+function Rails::BestTileToContinuePath(actualNode, targetNode, direction, radius = 2) {
+	local tiles = Rails.GetBuildableTilesAroundNode(targetNode, radius);
+	// If horizontal or vertical, try to keep X or Y the same
+	// There is chance no obstacle is there and therefore straight line is built
 	if (Rails.IsDirectionDiagonal(direction) == false) {
 		if (Rails.IsDirectionHorizontal(direction)) {
 			tiles.Valuate(AIMap.GetTileY);
-			Rails.ValuateEqualValueAsTrue(tiles, actualTileY);
+			Rails.ValuateEqualValueAsTrue(tiles, actualNode.y);
 		} else {
 			tiles.Valuate(AIMap.GetTileX);
-			Rails.ValuateEqualValueAsTrue(tiles, actualTileX);
+			Rails.ValuateEqualValueAsTrue(tiles, actualNode.x);
 		}
 
+		// The nodes with same X or Y (based on direction) are valued 1, others are 0
+		// By sorting them descending we first get those with same X or Y
 		tiles.Sort(AIList.SORT_BY_VALUE, false);
 	}
 
-	AILog.Info("Actual: " + actualTileX + "," + actualTileY);
 	foreach(tile, value in tiles) {
-		local tileX = AIMap.GetTileX(tile);
-		local tileY = AIMap.GetTileY(tile);
-		AILog.Info(tileX + "," + tileY + " have value " + tiles.GetValue(tile));
-	}
+		local node = Node.CreateFromTile(tile);
 
-	foreach(tile, value in tiles) {
-		local tileX = AIMap.GetTileX(tile);
-		local tileY = AIMap.GetTileY(tile);
-		AILog.Info(tileX + "," + tileY + " have value " + tiles.GetValue(tile));
 		local directionNode = Rails.DirectionToNode(direction);
-		local nextNodeInPath = Node(tileX + directionNode.x, tileY + directionNode.y);
+		local nextNodeInPath = Node(node.x + directionNode.x, node.y + directionNode.y);
 		if (AITile.IsBuildable(nextNodeInPath.tile)) {
 			return tile;
 		}
@@ -335,7 +305,7 @@ function Rails::ValuateEqualValueAsTrue(list, val) {
 		}
 	}
 
-	//AIList does not work when setting values while iterating it
+	// AIList does not work when setting values while iterating it
 	foreach(item in preferredValues) {
 		list.SetValue(item, 1);
 	}
