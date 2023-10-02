@@ -21,7 +21,7 @@ class Rails {
 }
 
 enum RailBuildPhase {
-    normal
+	normal
 }
 
 enum Direction {
@@ -140,7 +140,7 @@ function Rails::PlanRail(position1, position2) {
 	local fullPath = [root];
 	local actual = root;
 	local next = null;
-	local lastRailTile = actual.tile + AIMap.GetTileIndex(-1, 0);
+	local lastRailNode = actual.MovePositionByXY(-1, 0);
 	local lastDirection = 0;
 	AISign.BuildSign(root.tile, "ROOT");
 
@@ -159,32 +159,37 @@ function Rails::PlanRail(position1, position2) {
 			continue;
 		}
 
-		local possibility = target.tile;
+		local possibility = target;
 		local direction = 0;
 		if (AITile.GetDistanceManhattanToTile(actual.tile, target.tile) > DIFF_TO_FINISH_ROUTE) {
-			Log.Debug("Rails::PlanRail From " + actual.ToString() + " to " + target.ToString() + " is close enough, finishing route");
+			Log.Debug("Rails::PlanRail *** Looking for next waypoint From " + actual.ToString() + " to" + target.ToString());
 			local newNodeAndDirection = Rails.NextNodePosition(actual, target, lastDirection)
 			local nextPos = newNodeAndDirection.node;
 			direction = newNodeAndDirection.direction;
-			Log.CreateSign(nextPos.tile, "Node around: " + fullPath.len(), DEBUG_TYPE.BUILDING_STATION);
+			Log.CreateSign(nextPos.tile, "Node around: " + fullPath.len(), DEBUG_TYPE.BUILDING_RAIL);
 
-			possibility = Rails.BestTileToContinuePath(actual, nextPos, direction);
-			Log.CreateSign(nextPos.tile, "Node specific: " + fullPath.len(), DEBUG_TYPE.BUILDING_STATION);
+			possibility = Rails.BestNodeToContinuePath(actual, nextPos, direction);
+			Log.CreateSign(nextPos.tile, "Node specific: " + fullPath.len(), DEBUG_TYPE.BUILDING_RAIL);
+		} else {
+			Log.Debug("Rails::PlanRail *** From " + actual.ToString() + " to " + target.ToString() + " is close enough, finishing route");
 		}
 
 		actual.iteration += 1;
 		local pathfinder = RailPathFinder();
+		local nextNodeInDirection = possibility.MovePositionByDirection(direction);
+		Log.Debug("Rails::PlanRail *** Pathfinding from " + lastRailNode.ToString() + "-" + actual.ToString() + " to " +
+			nextNodeInDirection.ToString() + "-" + possibility.ToString(), DEBUG_TYPE.BUILDING_RAIL);
 		pathfinder.InitializePath([
-			[possibility, possibility + Rails.DirectionToNode(direction).tile]
+			[possibility.tile, nextNodeInDirection.tile]
 		], [
-			[actual.tile, lastRailTile]
+			[actual.tile, lastRailNode.tile]
 		]);
 
-		lastRailTile = possibility;
+		lastRailNode = possibility;
 
 		AILog.Info("Pathfinding...");
 		local findingTime = MAX_PATHFINDING_TIME;
-		if (possibility == target.tile) {
+		if (possibility.tile == target.tile) {
 			findingTime = MAX_PATHFINDING_TIME_FINAL;
 		}
 
@@ -193,11 +198,12 @@ function Rails::PlanRail(position1, position2) {
 		if (path != false && path != null) {
 			AILog.Info("Found path");
 			paths.push(path);
-			AILog.Info("possibility: " + AIMap.GetTileX(possibility) + ":" + AIMap.GetTileY(possibility))
-			local newNode = Node(AIMap.GetTileX(possibility) + Rails.DirectionToNode(direction).tile, AIMap.GetTileY(possibility), actual);
+			// AILog.Info("possibility: " + AIMap.GetTileX(possibility) + ":" + AIMap.GetTileY(possibility))
+			local newNode = possibility.MovePositionNode(Rails.DirectionToNode(direction));
 			Log.Debug("Node no. " + fullPath.len(), DEBUG_TYPE.BUILDING_RAIL);
-			Log.Debug("Rails::PlanRail:Building from " + actual.ToString() + " to " + newNode.ToString(), DEBUG_TYPE.BUILDING_RAIL);
-			Log.CreateSign(newNode.tile, "Node: " + fullPath.len(), DEBUG_TYPE.BUILDING_RAIL);
+			Log.Debug("Next node: " + newNode.ToString(), DEBUG_TYPE.BUILDING_RAIL);
+			Log.Debug("Rails::PlanRail *** Building from " + actual.ToString() + " to " + newNode.ToString(), DEBUG_TYPE.BUILDING_RAIL);
+			Log.CreateSign(newNode.tile, "NextNode: " + fullPath.len(), DEBUG_TYPE.BUILDING_RAIL);
 			Log.Debug(" ", DEBUG_TYPE.BUILDING_RAIL);
 			fullPath.push(newNode);
 			actual = newNode;
@@ -293,7 +299,7 @@ function Rails::GetBuildableTilesAroundNode(node, radius = 2) {
 	return list;
 }
 
-function Rails::BestTileToContinuePath(actualNode, targetNode, direction, radius = 2) {
+function Rails::BestNodeToContinuePath(actualNode, targetNode, direction, radius = 2) {
 	local tiles = Rails.GetBuildableTilesAroundNode(targetNode, radius);
 	// If horizontal or vertical, try to keep X or Y the same
 	// There is chance no obstacle is there and therefore straight line is built
@@ -321,7 +327,7 @@ function Rails::BestTileToContinuePath(actualNode, targetNode, direction, radius
 		local directionNode = Rails.DirectionToNode(direction);
 		local nextNodeInPath = Node(node.x + directionNode.x, node.y + directionNode.y);
 		if (AITile.IsBuildable(nextNodeInPath.tile)) {
-			return tile;
+			return Node.CreateFromTile(tile);
 		}
 	}
 }

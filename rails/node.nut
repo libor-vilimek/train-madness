@@ -25,6 +25,14 @@ class Node {
 		return Node(this.x + node.x, this.y + node.y);
 	}
 
+	function MovePositionByDirection(direction) {
+		return this.MovePositionNode(Rails.DirectionToNode(direction));
+	}
+
+	function MovePositionByXY(x,y) {
+		return Node(this.x + x, this.y + y);
+	}
+
     static function CreateFromTile(tile) {
         local tileX = AIMap.GetTileX(tile);
         local tileY = AIMap.GetTileY(tile);
