@@ -4,7 +4,8 @@ enum LOG_LEVEL {
 }
 
 enum DEBUG_TYPE {
-    BUILDING_STATION
+    BUILDING_STATION,
+    BUILDING_RAIL
 }
 
 class Constants {
@@ -18,11 +19,34 @@ class Constants {
     HIGH_QUEUE_PRIORITY = 3;
 
     DEBUG_BUILDING_STATION = true;
+    DEBUG_BUILDING_RAIL = true;
+
+    DEBUG_SIGNS_BUILDING_STATION = true;
+    DEBUG_SIGNS_BUILDING_RAIL = true;
 }
 
-function Constants::IsDebugEnabled(debugType) {
-    if (debugType == DEBUG_TYPE.BUILDING_STATION && Constants.DEBUG_BUILDING_STATION == true) {
+function Constants::IsDebugEnabled(debugType, isSign = false) {
+    // Without debugType its considered "log always"
+    if (debugType == null) {
         return true;
+    }
+
+    if (isSign) {
+        if (debugType == DEBUG_TYPE.BUILDING_STATION && Constants.DEBUG_SIGNS_BUILDING_STATION == true) {
+            return true;
+        }
+
+        if (debugType == DEBUG_TYPE.BUILDING_RAIL && Constants.DEBUG_SIGNS_BUILDING_RAIL == true) {
+            return true;
+        }
+    } else {
+        if (debugType == DEBUG_TYPE.BUILDING_STATION && Constants.DEBUG_BUILDING_STATION == true) {
+            return true;
+        }
+
+        if (debugType == DEBUG_TYPE.BUILDING_RAIL && Constants.DEBUG_BUILDING_RAIL == true) {
+            return true;
+        }
     }
 
     return false;

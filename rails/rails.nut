@@ -2,6 +2,7 @@ const WAYPOINT_LENGTH = 16;
 const WAYPOINT_LENGTH_DIAGONAL = 12;
 const MAX_PATHFINDING_TIME = 1500;
 const MAX_PATHFINDING_TIME_FINAL = 4500;
+const DIFF_TO_FINISH_ROUTE = 35;
 
 class Rails {
 	fromTile = null;
@@ -160,13 +161,15 @@ function Rails::PlanRail(position1, position2) {
 
 		local possibility = target.tile;
 		local direction = 0;
-		if (AITile.GetDistanceManhattanToTile(actual.tile, target.tile) > 35) {
+		if (AITile.GetDistanceManhattanToTile(actual.tile, target.tile) > DIFF_TO_FINISH_ROUTE) {
+			Log.Debug("Rails::PlanRail From " + actual.ToString() + " to " + target.ToString() + " is close enough, finishing route");
 			local newNodeAndDirection = Rails.NextNodePosition(actual, target, lastDirection)
 			local nextPos = newNodeAndDirection.node;
 			direction = newNodeAndDirection.direction;
-			Log.CreateSign(nextPos.tile, "Next possible part of railway here");
+			Log.CreateSign(nextPos.tile, "Node around: " + fullPath.len(), DEBUG_TYPE.BUILDING_STATION);
 
 			possibility = Rails.BestTileToContinuePath(actual, nextPos, direction);
+			Log.CreateSign(nextPos.tile, "Node specific: " + fullPath.len(), DEBUG_TYPE.BUILDING_STATION);
 		}
 
 		actual.iteration += 1;
@@ -190,8 +193,12 @@ function Rails::PlanRail(position1, position2) {
 		if (path != false && path != null) {
 			AILog.Info("Found path");
 			paths.push(path);
+			AILog.Info("possibility: " + AIMap.GetTileX(possibility) + ":" + AIMap.GetTileY(possibility))
 			local newNode = Node(AIMap.GetTileX(possibility) + Rails.DirectionToNode(direction).tile, AIMap.GetTileY(possibility), actual);
-			AISign.BuildSign(newNode.tile, "Node: " + fullPath.len());
+			Log.Debug("Node no. " + fullPath.len(), DEBUG_TYPE.BUILDING_RAIL);
+			Log.Debug("Rails::PlanRail:Building from " + actual.ToString() + " to " + newNode.ToString(), DEBUG_TYPE.BUILDING_RAIL);
+			Log.CreateSign(newNode.tile, "Node: " + fullPath.len(), DEBUG_TYPE.BUILDING_RAIL);
+			Log.Debug(" ", DEBUG_TYPE.BUILDING_RAIL);
 			fullPath.push(newNode);
 			actual = newNode;
 			Rails.BuildRail(path);
@@ -207,6 +214,7 @@ function Rails::PlanRail(position1, position2) {
 }
 
 function Rails::NextNodePosition(from, to, currentDirection) {
+	Log.Debug("Rails::NextNodePosition: Going from " + from.x + ":" + from.y + " to " + to.x + ":" + to.y, DEBUG_TYPE.BUILDING_RAIL);
 	local nextDirection = null;
 
 	if (Rails.IsBeneficalToKeepDirection(from, to, currentDirection)) {
@@ -260,7 +268,6 @@ function Rails::IsBeneficalToKeepDirection(from, to, direction) {
 function Rails::MainDirection(from, to) {
 	local xDiffers = abs(from.x - to.x);
 	local yDiffers = abs(from.y - to.y);
-	Log.Debug("Going from " + from.x + ":" + from.y + " to " + to.x + ":" + to.y);
 	Log.Debug("xDiffers: " + xDiffers + " and yDiffers: " + yDiffers);
 
 	if (xDiffers > yDiffers) {
@@ -291,10 +298,13 @@ function Rails::BestTileToContinuePath(actualNode, targetNode, direction, radius
 	// If horizontal or vertical, try to keep X or Y the same
 	// There is chance no obstacle is there and therefore straight line is built
 	if (Rails.IsDirectionDiagonal(direction) == false) {
+		Log.Debug("BestTileToContinuePath: Direction is not diagonal")
 		if (Rails.IsDirectionHorizontal(direction)) {
+			Log.Debug("BestTileToContinuePath: Direction is horizontal")
 			tiles.Valuate(AIMap.GetTileY);
 			Rails.ValuateEqualValueAsTrue(tiles, actualNode.y);
 		} else {
+			Log.Debug("BestTileToContinuePath: Direction is vertical")
 			tiles.Valuate(AIMap.GetTileX);
 			Rails.ValuateEqualValueAsTrue(tiles, actualNode.x);
 		}
@@ -306,6 +316,7 @@ function Rails::BestTileToContinuePath(actualNode, targetNode, direction, radius
 
 	foreach(tile, value in tiles) {
 		local node = Node.CreateFromTile(tile);
+		Log.CreateSign(tile, "" + tiles.GetValue(tile), DEBUG_TYPE.BUILDING_STATION);
 
 		local directionNode = Rails.DirectionToNode(direction);
 		local nextNodeInPath = Node(node.x + directionNode.x, node.y + directionNode.y);
@@ -316,6 +327,7 @@ function Rails::BestTileToContinuePath(actualNode, targetNode, direction, radius
 }
 
 function Rails::ValuateEqualValueAsTrue(list, val) {
+	Log.Debug("ValuateEqualValueAsTrue: Preffered value: " + val);
 	local preferredValues = [];
 	local otherValues = [];
 	foreach(item, value in list) {
@@ -333,4 +345,5 @@ function Rails::ValuateEqualValueAsTrue(list, val) {
 	foreach(item in otherValues) {
 		list.SetValue(item, 0);
 	}
+	Log.Debug("ValuateEqualValueAsTrue: Found " + preferredValues.len() + " preffered and " + otherValues.len() + " others ");
 }

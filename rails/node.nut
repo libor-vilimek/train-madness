@@ -13,6 +13,18 @@ class Node {
 		this.iteration = 0;
 	}
 
+	function ToString() {
+		return "Node(" + this.x + ":" + this.y + ")";
+	}
+
+	function MovePositionTile(tile){
+		return this.MovePositionNode(Node.CreateFromTile(tile));
+	}
+
+	function MovePositionNode(node){
+		return Node(this.x + node.x, this.y + node.y);
+	}
+
     static function CreateFromTile(tile) {
         local tileX = AIMap.GetTileX(tile);
         local tileY = AIMap.GetTileY(tile);
