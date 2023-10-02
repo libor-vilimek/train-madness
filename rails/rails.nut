@@ -4,6 +4,10 @@ const MAX_PATHFINDING_TIME = 500;
 const MAX_PATHFINDING_TIME_FINAL = 4500;
 const DIFF_TO_FINISH_ROUTE = 35;
 
+enum RailBuildPhase {
+	normal
+}
+
 class DirectionNode {
 	fromNode = null;
 	toNode = null;
@@ -22,20 +26,22 @@ class BacktrackingNode {
 	direction = null;
 	iteration = 0;
 	directionNode = null;
-	parent = null;
+	parentNode = null;
 	path = null;
 	depth = 0;
 
-	constructor(directionNode) {
+	constructor(directionNode, direction = null) {
 		this.directionNode = directionNode;
+		this.direction = direction;
 		this.iteration = 0;
 	}
 
 	function CreateChild(directionNode, path) {
 		local child = BacktrackingNode(directionNode);
-		child.parent = this;
+		child.parentNode = this;
 		child.depth = this.depth + 1;
 		child.path = path;
+		child.direction = this.direction;
 
 		return child;
 	}
@@ -51,7 +57,8 @@ class Rails {
 		this.fromDirectionNode = fromDirectionNode;
 		this.toDirectionNode = toDirectionNode;
 		this.buildPhase = RailBuildPhase.normal;
-		this.actualBacktrackingNode = BacktrackingNode(fromDirectionNode, toDirectionNode);
+		local direction = Rails.MainDirection(fromDirectionNode.toNode, toDirectionNode.fromNode);
+		this.actualBacktrackingNode = BacktrackingNode(fromDirectionNode, direction);
 	}
 
 	function BuildNext() {
@@ -63,7 +70,7 @@ class Rails {
 			}
 
 			Rails.RemoveRail(this.actualBacktrackingNode.path);
-			this.actualBacktrackingNode = this.actualBacktrackingNode.parent;
+			this.actualBacktrackingNode = this.actualBacktrackingNode.parentNode;
 			return true;
 		}
 
@@ -84,9 +91,9 @@ function Rails::PlanAndBuildPartOfRail(actualBacktrackingNode, toDirectionNode) 
 	local possibility = toNode;
 	local direction = actualBacktrackingNode.direction;
 
-	if (Node.GetManhattanDistance(actualNode, toNode) > DIFF_TO_FINISH_ROUTE) {
-		Log.Debug("Rails::PlanRail *** Looking for next waypoint From " + actualNode.ToString() + " to" + toNode.ToString());
-		local newNodeAndDirection = Rails.NextNodePosition(actualNode, toNode, actualBacktrackingNode.direction)
+	if (Node.GetManhattanDistance(fromNode, toNode) > DIFF_TO_FINISH_ROUTE) {
+		Log.Debug("Rails::PlanRail *** Looking for next waypoint From " + fromNode.ToString() + " to" + toNode.ToString());
+		local newNodeAndDirection = Rails.NextNodePosition(fromNode, toNode, actualBacktrackingNode.direction)
 		local nextPos = newNodeAndDirection.node;
 		direction = newNodeAndDirection.direction;
 		Log.CreateSign(nextPos.tile, "Node around: " + actualBacktrackingNode.depth, DEBUG_TYPE.BUILDING_RAIL);
@@ -129,10 +136,6 @@ function Rails::PlanAndBuildPartOfRail(actualBacktrackingNode, toDirectionNode) 
 		directionNode = DirectionNode(possibility, nextNodeInDirection),
 		path = path
 	};
-}
-
-enum RailBuildPhase {
-	normal
 }
 
 enum Direction {
@@ -247,6 +250,7 @@ function Rails::BuildRail(path) {
 	}
 }
 
+/*
 function Rails::PlanRail(position1, position2) {
 	local paths = [];
 	local root = Node.CreateFromTile(position1);
@@ -330,6 +334,8 @@ function Rails::PlanRail(position1, position2) {
 		}
 	}
 }
+
+*/
 
 function Rails::NextNodePosition(from, to, currentDirection) {
 	Log.Debug("Rails::NextNodePosition: Going from " + from.x + ":" + from.y + " to " + to.x + ":" + to.y, DEBUG_TYPE.BUILDING_RAIL);
