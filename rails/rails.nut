@@ -4,7 +4,23 @@ const MAX_PATHFINDING_TIME = 1500;
 const MAX_PATHFINDING_TIME_FINAL = 4500;
 
 class Rails {
+	fromTile = null;
+	toTile = null;
+	buildPhase = RailBuildPhase.normal;
 
+	constructor(fromTile, toTile) {
+		this.fromTile = fromTile;
+		this.toTile = toTile;
+		buildPhase = RailBuildPhase.normal;
+	}
+
+	function BuildNext() {
+
+	}
+}
+
+enum RailBuildPhase {
+    normal
 }
 
 enum Direction {
@@ -219,28 +235,33 @@ function Rails::IsBeneficalToKeepDirection(from, to, direction) {
 	local yDiffers = abs(from.y - to.y);
 
 	if (Rails.IsDirectionHorizontal(direction) && xDiffers < WAYPOINT_LENGTH) {
+		Log.Debug("IsBeneficalToKeepDirection: The connection is horizontal, but xDiffers is not big enough: " + xDiffers);
 		return false;
 	}
 
 	if (Rails.IsDirectionVertical(direction) && yDiffers < WAYPOINT_LENGTH) {
+		Log.Debug("IsBeneficalToKeepDirection: The connection is vertical, but yDiffers is not big enough: " + yDiffers);
 		return false;
 	}
 
 	local change = Rails.DirectionChange(direction);
-	local xDiffers2 = abs(from.x + change.x);
-	local yDiffers2 = abs(from.y + change.y);
+	local xDiffers2 = abs(from.x - to.x + change.x);
+	local yDiffers2 = abs(from.y - to.y + change.y);
 
 	if ((xDiffers + yDiffers) - (xDiffers2 + yDiffers2) > WAYPOINT_LENGTH / 2) {
+		Log.Debug("IsBeneficalToKeepDirection: true");
 		return true;
 	}
 
+	Log.Debug("IsBeneficalToKeepDirection: " + ((xDiffers + yDiffers) - (xDiffers2 + yDiffers2)) + " < " + WAYPOINT_LENGTH / 2);
 	return false;
 }
 
 function Rails::MainDirection(from, to) {
 	local xDiffers = abs(from.x - to.x);
 	local yDiffers = abs(from.y - to.y);
-	AILog.Info("xDiffers: " + xDiffers + " and yDiffers: " + yDiffers);
+	Log.Debug("Going from " + from.x + ":" + from.y + " to " + to.x + ":" + to.y);
+	Log.Debug("xDiffers: " + xDiffers + " and yDiffers: " + yDiffers);
 
 	if (xDiffers > yDiffers) {
 		if (from.x < to.x) {
