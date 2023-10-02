@@ -1,27 +1,141 @@
 const WAYPOINT_LENGTH = 16;
 const WAYPOINT_LENGTH_DIAGONAL = 12;
-const MAX_PATHFINDING_TIME = 1500;
+const MAX_PATHFINDING_TIME = 500;
 const MAX_PATHFINDING_TIME_FINAL = 4500;
 const DIFF_TO_FINISH_ROUTE = 35;
 
-class Rails {
-	fromTile = null;
-	toTile = null;
-	buildPhase = RailBuildPhase.normal;
+enum RailBuildPhase {
+	normal
+}
 
-	constructor(fromTile, toTile) {
-		this.fromTile = fromTile;
-		this.toTile = toTile;
-		buildPhase = RailBuildPhase.normal;
+class DirectionNode {
+	fromNode = null;
+	toNode = null;
+
+	constructor(fromNode, toNode) {
+		this.fromNode = fromNode;
+		this.toNode = toNode;
 	}
 
-	function BuildNext() {
-
+	function ToString() {
+		return "DirectionNode: " + this.fromNode.ToString() + " " + this.toNode.ToString();
 	}
 }
 
-enum RailBuildPhase {
-	normal
+class BacktrackingNode {
+	direction = null;
+	iteration = 0;
+	directionNode = null;
+	parentNode = null;
+	path = null;
+	depth = 0;
+
+	constructor(directionNode, direction = null) {
+		this.directionNode = directionNode;
+		this.direction = direction;
+		this.iteration = 0;
+	}
+
+	function CreateChild(directionNode, path) {
+		local child = BacktrackingNode(directionNode);
+		child.parentNode = this;
+		child.depth = this.depth + 1;
+		child.path = path;
+		child.direction = this.direction;
+
+		return child;
+	}
+}
+
+class Rails {
+	fromDirectionNode = null;
+	toDirectionNode = null;
+	buildPhase = RailBuildPhase.normal;
+	actualBacktrackingNode = null;
+
+	constructor(fromDirectionNode, toDirectionNode) {
+		this.fromDirectionNode = fromDirectionNode;
+		this.toDirectionNode = toDirectionNode;
+		this.buildPhase = RailBuildPhase.normal;
+		local direction = Rails.MainDirection(fromDirectionNode.toNode, toDirectionNode.fromNode);
+		this.actualBacktrackingNode = BacktrackingNode(fromDirectionNode, direction);
+	}
+
+	function BuildNext() {
+		if (this.actualBacktrackingNode.iteration >= 8) {
+			AILog.Info("Rails::BuildNext *** Removing from the path");
+			if (this.actualBacktrackingNode.parentBacktrackingNode == null) {
+				AILog.Info("Rails::BuildNext *** Cancelling - path was not found")
+				return false;
+			}
+
+			Rails.RemoveRail(this.actualBacktrackingNode.path);
+			this.actualBacktrackingNode = this.actualBacktrackingNode.parentNode;
+			return true;
+		}
+
+		local result = Rails.PlanAndBuildPartOfRail(this.actualBacktrackingNode, this.toDirectionNode);
+		if (result == null) {
+			this.actualBacktrackingNode.iteration++;
+			return true;
+		}
+
+		this.actualBacktrackingNode = this.actualBacktrackingNode.CreateChild(result.directionNode, result.path);
+		return true;
+	}
+}
+
+function Rails::PlanAndBuildPartOfRail(actualBacktrackingNode, toDirectionNode) {
+	local fromNode = actualBacktrackingNode.directionNode.toNode;
+	local toNode = toDirectionNode.fromNode;
+	local possibility = toNode;
+	local direction = actualBacktrackingNode.direction;
+
+	if (Node.GetManhattanDistance(fromNode, toNode) > DIFF_TO_FINISH_ROUTE) {
+		Log.Debug("Rails::PlanRail *** Looking for next waypoint From " + fromNode.ToString() + " to" + toNode.ToString());
+		local newNodeAndDirection = Rails.NextNodePosition(fromNode, toNode, actualBacktrackingNode.direction)
+		local nextPos = newNodeAndDirection.node;
+		direction = newNodeAndDirection.direction;
+		Log.CreateSign(nextPos.tile, "Node around: " + actualBacktrackingNode.depth, DEBUG_TYPE.BUILDING_RAIL);
+
+		possibility = Rails.BestNodeToContinuePath(fromNode, nextPos, direction);
+		Log.CreateSign(nextPos.tile, "Node specific: " + actualBacktrackingNode.depth, DEBUG_TYPE.BUILDING_RAIL);
+	} else {
+		Log.Debug("Rails::PlanRail *** From " + fromNode.ToString() + " to " + toNode.ToString() + " is close enough, finishing route");
+	}
+
+	local pathfinder = RailPathFinder();
+	local nextNodeInDirection = possibility.MovePositionByDirection(direction);
+	Log.Debug("Rails::PlanRail *** Pathfinding from " + actualBacktrackingNode.directionNode.ToString() + " to " +
+		nextNodeInDirection.ToString() + "-" + possibility.ToString(), DEBUG_TYPE.BUILDING_RAIL);
+	pathfinder.InitializePath([
+		[possibility.tile, nextNodeInDirection.tile]
+	], [
+		[fromNode.tile, actualBacktrackingNode.directionNode.fromNode.tile]
+	]);
+
+	local findingTime = MAX_PATHFINDING_TIME;
+	if (possibility.tile == toNode.tile) {
+		findingTime = MAX_PATHFINDING_TIME_FINAL;
+	}
+
+	local path = pathfinder.FindPath(findingTime);
+
+	if (path == false || path == null) {
+		Log.Debug("Rails::PlanRail *** Path not found", DEBUG_TYPE.BUILDING_RAIL);
+		return null;
+	}
+	local newNode = possibility.MovePositionNode(Rails.DirectionToNode(direction));
+
+	Log.Debug("Rails::PlanRail *** Found Path: Next node no. " + actualBacktrackingNode.depth + ":" + newNode.ToString(), DEBUG_TYPE.BUILDING_RAIL);
+	Log.Debug("Rails::PlanRail *** Building from " + fromNode.ToString() + " to " + newNode.ToString(), DEBUG_TYPE.BUILDING_RAIL);
+	Log.CreateSign(newNode.tile, "NextNode: " + actualBacktrackingNode.depth, DEBUG_TYPE.BUILDING_RAIL);
+	Log.Debug(" ", DEBUG_TYPE.BUILDING_RAIL);
+	Rails.BuildRail(path);
+	return {
+		directionNode = DirectionNode(possibility, nextNodeInDirection),
+		path = path
+	};
 }
 
 enum Direction {
@@ -35,6 +149,9 @@ enum Direction {
 		DOWN_LEFT = 7
 }
 
+function Rails::OppositeDirection(direction) {
+	return (direction + 4) % 8;
+}
 
 function Rails::DirectionToNode(direction) {
 	if (direction == Direction.LEFT) {
@@ -133,6 +250,7 @@ function Rails::BuildRail(path) {
 	}
 }
 
+/*
 function Rails::PlanRail(position1, position2) {
 	local paths = [];
 	local root = Node.CreateFromTile(position1);
@@ -159,7 +277,7 @@ function Rails::PlanRail(position1, position2) {
 			continue;
 		}
 
-		local possibility = target;
+		local possibility = null;
 		local direction = 0;
 		if (AITile.GetDistanceManhattanToTile(actual.tile, target.tile) > DIFF_TO_FINISH_ROUTE) {
 			Log.Debug("Rails::PlanRail *** Looking for next waypoint From " + actual.ToString() + " to" + target.ToString());
@@ -171,6 +289,7 @@ function Rails::PlanRail(position1, position2) {
 			possibility = Rails.BestNodeToContinuePath(actual, nextPos, direction);
 			Log.CreateSign(nextPos.tile, "Node specific: " + fullPath.len(), DEBUG_TYPE.BUILDING_RAIL);
 		} else {
+			possibility = target;
 			Log.Debug("Rails::PlanRail *** From " + actual.ToString() + " to " + target.ToString() + " is close enough, finishing route");
 		}
 
@@ -207,14 +326,16 @@ function Rails::PlanRail(position1, position2) {
 			Rails.BuildRail(path);
 			lastDirection = direction;
 			if (possibility.tile == target.tile) {
-				Log.Debug("Finishing the route");
+				Log.Debug("Rails::PlanRail *** Finishing the route", DEBUG_TYPE.BUILDING_RAIL);
 				break;
 			}
 		} else {
-			AILog.Info("Path not found");
+			Log.Debug("Rails::PlanRail *** Path not found", DEBUG_TYPE.BUILDING_RAIL);
 		}
 	}
 }
+
+*/
 
 function Rails::NextNodePosition(from, to, currentDirection) {
 	Log.Debug("Rails::NextNodePosition: Going from " + from.x + ":" + from.y + " to " + to.x + ":" + to.y, DEBUG_TYPE.BUILDING_RAIL);
@@ -224,7 +345,7 @@ function Rails::NextNodePosition(from, to, currentDirection) {
 		nextDirection = currentDirection;
 	} else {
 		local coreDirection = Rails.MainDirection(from, to);
-		Log.Info("Core direction is: " + coreDirection);
+		Log.Info("Rails::NextNodePosition: Core direction is: " + coreDirection);
 		local howmuch = (from.iteration / 2).tointeger();
 		if (from.iteration % 2 == 0) {
 			nextDirection = (coreDirection - howmuch + 8) % 8;

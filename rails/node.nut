@@ -39,4 +39,8 @@ class Node {
 
         return Node(tileX,tileY);
     }
+
+	static function GetManhattanDistance(node1, node2) {
+		return AITile.GetDistanceManhattanToTile(node1.tile, node2.tile);
+	}
 }
