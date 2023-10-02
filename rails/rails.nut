@@ -187,7 +187,6 @@ function Rails::PlanRail(position1, position2) {
 
 		lastRailNode = possibility;
 
-		AILog.Info("Pathfinding...");
 		local findingTime = MAX_PATHFINDING_TIME;
 		if (possibility.tile == target.tile) {
 			findingTime = MAX_PATHFINDING_TIME_FINAL;
@@ -196,12 +195,10 @@ function Rails::PlanRail(position1, position2) {
 		local path = pathfinder.FindPath(findingTime);
 
 		if (path != false && path != null) {
-			AILog.Info("Found path");
 			paths.push(path);
 			// AILog.Info("possibility: " + AIMap.GetTileX(possibility) + ":" + AIMap.GetTileY(possibility))
 			local newNode = possibility.MovePositionNode(Rails.DirectionToNode(direction));
-			Log.Debug("Node no. " + fullPath.len(), DEBUG_TYPE.BUILDING_RAIL);
-			Log.Debug("Next node: " + newNode.ToString(), DEBUG_TYPE.BUILDING_RAIL);
+			Log.Debug("Rails::PlanRail *** Found Path: Next node no. " + fullPath.len() + ":" + newNode.ToString(), DEBUG_TYPE.BUILDING_RAIL);
 			Log.Debug("Rails::PlanRail *** Building from " + actual.ToString() + " to " + newNode.ToString(), DEBUG_TYPE.BUILDING_RAIL);
 			Log.CreateSign(newNode.tile, "NextNode: " + fullPath.len(), DEBUG_TYPE.BUILDING_RAIL);
 			Log.Debug(" ", DEBUG_TYPE.BUILDING_RAIL);
@@ -209,7 +206,7 @@ function Rails::PlanRail(position1, position2) {
 			actual = newNode;
 			Rails.BuildRail(path);
 			lastDirection = direction;
-			if (possibility == target.tile) {
+			if (possibility.tile == target.tile) {
 				Log.Debug("Finishing the route");
 				break;
 			}
