@@ -1,16 +1,16 @@
 class Node {
-	iteration = 0;
 	x = -1;
 	y = -1;
 	tile = null;
-	parentNode = null;
 
-	constructor(x, y, parentNode = null) {
+	constructor(x, y) {
 		this.x = x;
 		this.y = y;
 		this.tile = AIMap.GetTileIndex(x, y);
-		this.parentNode = parentNode;
-		this.iteration = 0;
+	}
+
+	function IsSame(node){
+		return Node.AreSameNodes(this, node);
 	}
 
 	function ToString() {
@@ -42,5 +42,9 @@ class Node {
 
 	static function GetManhattanDistance(node1, node2) {
 		return AITile.GetDistanceManhattanToTile(node1.tile, node2.tile);
+	}
+
+	static function AreSameNodes(node1, node2) {
+		return (node1.x == node2.x && node1.y == node2.y);
 	}
 }

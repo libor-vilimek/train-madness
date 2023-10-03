@@ -29,7 +29,7 @@ function RailManager::Next() {
 		this._currentState = RAIL_MANAGER_STATE.buildingRail;
 
 		RailManager.BuildRail(this.startLocation, this.endLocation);
-		RailManager.BuildRail(newStations.startLocation2, newStations.endLocation2);
+		//RailManager.BuildRail(newStations.startLocation2, newStations.endLocation2);
 		this._currentState = RAIL_MANAGER_STATE.finished;
 	} else if (_currentState == RAIL_MANAGER_STATE.buildingRail) {
 		// RailManager.BuildRail(this.startLocation, this.endLocation);
