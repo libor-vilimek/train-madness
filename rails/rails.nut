@@ -72,6 +72,7 @@ class Rails {
 
 			Rails.RemoveRail(this.actualBacktrackingNode.path);
 			this.actualBacktrackingNode = this.actualBacktrackingNode.parentNode;
+			this.actualBacktrackingNode.iteration++;
 			return true;
 		}
 
@@ -84,6 +85,11 @@ class Rails {
 
 		Log.Debug("Rails::BuildNext *** New Path was found and built", DEBUG_TYPE.BUILDING_RAIL)
 		this.actualBacktrackingNode = this.actualBacktrackingNode.CreateChild(result.directionNode, result.path, result.direction);
+
+		if (result.completed) {
+			Log.Debug("Rails::BuildNext *** RAIL FINISHED!!! Exiting", DEBUG_TYPE.BUILDING_RAIL);
+			return false;
+		}
 
 		return true;
 	}
@@ -222,7 +228,8 @@ function Rails::PlanAndBuildPartOfRail(actualBacktrackingNode, toDirectionNode) 
 	return {
 		directionNode = DirectionNode(possibility, nextNodeInDirection),
 		path = path,
-		direction = direction
+		direction = direction,
+		completed = possibility.tile == toNode.tile
 	};
 }
 
@@ -230,7 +237,7 @@ function Rails::NextNodePosition(from, to, currentDirection, iteration) {
 	Log.Debug("Rails::NextNodePosition *** Going from " + from.x + ":" + from.y + " to " + to.x + ":" + to.y, DEBUG_TYPE.BUILDING_RAIL);
 	local nextDirection = null;
 
-	if (Rails.IsBeneficalToKeepDirection(from, to, currentDirection)) {
+	if (Rails.IsBeneficalToKeepDirection(from, to, currentDirection) && iteration == 0) {
 		nextDirection = currentDirection;
 	} else {
 		local coreDirection = Rails.MainDirection(from, to);

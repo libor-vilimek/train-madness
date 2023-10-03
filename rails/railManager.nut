@@ -29,7 +29,7 @@ function RailManager::Next() {
 		this._currentState = RAIL_MANAGER_STATE.buildingRail;
 
 		RailManager.BuildRail(this.startLocation, this.endLocation);
-		//RailManager.BuildRail(newStations.startLocation2, newStations.endLocation2);
+		RailManager.BuildRail(newStations.startLocation2, newStations.endLocation2);
 		this._currentState = RAIL_MANAGER_STATE.finished;
 	} else if (_currentState == RAIL_MANAGER_STATE.buildingRail) {
 		// RailManager.BuildRail(this.startLocation, this.endLocation);
@@ -38,18 +38,20 @@ function RailManager::Next() {
 }
 
 function RailManager::BuildRail(fromLocation, toLocation) {
-    local rails = Rails(fromLocation, toLocation);
-    while (rails.BuildNext()){
-        // builing rail
-    }
+	local rails = Rails(fromLocation, toLocation);
+	while (rails.BuildNext()) {
+		// builing rail
+	}
 }
 
 function RailManager::BuildStations(industryProduce, industryAccept) {
 	local startLocation = null;
-    local startLocationPrev = null;
+	local startLocationPrev = null;
+	local startLocation2Prev = null;
 	local startLocation2 = null;
 	local endLocation = null;
-    local endLocationPrev = null;
+	local endLocationPrev = null;
+	local endLocation2Prev = null;
 	local endLocation2 = null;
 
 	local industryProduceLocation = AIIndustry.GetLocation(industryProduce);
@@ -67,7 +69,11 @@ function RailManager::BuildStations(industryProduce, industryAccept) {
 		local rail4 = AIRail.BuildRailTrack(location + AIMap.GetTileIndex(-1, 0), AIRail.RAILTRACK_SW_SE);
 		local rail5 = AIRail.BuildRailTrack(location + AIMap.GetTileIndex(-1, 1), AIRail.RAILTRACK_NW_SW);
 
-		if (result && depot && rail1 && rail2 && rail3 && rail4 && rail5) {
+		local rail6 = AIRail.BuildRailTrack(location + AIMap.GetTileIndex(0, 1), AIRail.RAILTRACK_SW_SE);
+		local rail7 = AIRail.BuildRailTrack(location + AIMap.GetTileIndex(1, 1), AIRail.RAILTRACK_SW_SE);
+		local rail8 = AIRail.BuildRailTrack(location + AIMap.GetTileIndex(2, 1), AIRail.RAILTRACK_SW_SE);
+
+		if (result && depot && rail1 && rail2 && rail3 && rail4 && rail5 && rail6 && rail7 && rail8) {
 			startTest = null;
 			local result = AIRail.BuildRailStation(location, AIRail.RAILTRACK_NE_SW, 1, 7, AIStation.STATION_NEW);
 			Log.CreateSign(location, "Building station here", DEBUG_TYPE.BUILDING_STATION);
@@ -79,6 +85,7 @@ function RailManager::BuildStations(industryProduce, industryAccept) {
 
 			startLocationPrev = Node.CreateFromTile(location + AIMap.GetTileIndex(6, 0));
 			startLocation = Node.CreateFromTile(location + AIMap.GetTileIndex(7, 0));
+			startLocation2Prev = Node.CreateFromTile(location + AIMap.GetTileIndex(-1, 1));
 			startLocation2 = Node.CreateFromTile(location + AIMap.GetTileIndex(0, 1));
 			Log.CreateSign(startLocation.tile, "Rail starting from here: " + startLocation.ToString(), DEBUG_TYPE.BUILDING_STATION);
 			break;
@@ -105,6 +112,7 @@ function RailManager::BuildStations(industryProduce, industryAccept) {
 			Log.CreateSign(location, "Building station here", DEBUG_TYPE.BUILDING_STATION);
 			endLocationPrev = Node.CreateFromTile(location + AIMap.GetTileIndex(-1, 0));
 			endLocation = Node.CreateFromTile(location);
+			endLocation2Prev = Node.CreateFromTile(location + AIMap.GetTileIndex(6, 0));
 			endLocation2 = Node.CreateFromTile(location + AIMap.GetTileIndex(7, 0));
 			Log.CreateSign(endLocation.tile, "Rail ending in here: " + endLocation.ToString(), DEBUG_TYPE.BUILDING_STATION);
 			break;
@@ -114,9 +122,9 @@ function RailManager::BuildStations(industryProduce, industryAccept) {
 
 	return {
 		startLocation = DirectionNode(startLocationPrev, startLocation),
-		startLocation2 = startLocation2,
+		startLocation2 = DirectionNode(startLocation2Prev, startLocation2),
 		endLocation = DirectionNode(endLocationPrev, endLocation),
-		endLocation2 = endLocation2
+		endLocation2 = DirectionNode(endLocation2Prev, endLocation2)
 	};
 }
 
