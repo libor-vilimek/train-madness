@@ -100,6 +100,10 @@ enum Direction {
 		DOWN_LEFT = 7
 }
 
+function Rails::IsOppositeDirection(direction1, direction2) {
+	return direction1 == Rails.OppositeDirection(direction2);
+}
+
 function Rails::OppositeDirection(direction) {
 	return (direction + 4) % 8;
 }
@@ -160,13 +164,18 @@ function Rails::PlanAndBuildPartOfRail(actualBacktrackingNode, toDirectionNode) 
 	local nextNodeInDirection = toDirectionNode.toNode;
 
 	if (Node.GetManhattanDistance(fromNode, toNode) > DIFF_TO_FINISH_ROUTE) {
-		Log.Debug("Rails::PlanRail *** Looking for next waypoint From " + fromNode.ToString() + " to" + toNode.ToString(), DEBUG_TYPE.BUILDING_RAIL);
+		Log.Debug("Rails::PlanAndBuildPartOfRail *** Looking for next waypoint From " + fromNode.ToString() + " to" + toNode.ToString(), DEBUG_TYPE.BUILDING_RAIL);
 		local newNodeAndDirection = Rails.NextNodePosition(fromNode, toNode, actualBacktrackingNode.direction, actualBacktrackingNode.iteration)
 		local nextPos = newNodeAndDirection.node;
 		direction = newNodeAndDirection.direction;
 		// Na = Node Around, it will look around this node for suitable locations
 		Log.CreateSign(nextPos.tile, "Na" + actualBacktrackingNode.depth + ":" + nextPos.ToString(), DEBUG_TYPE.BUILDING_RAIL);
-		Log.Debug("Rails::PlanRail *** Na" + actualBacktrackingNode.depth + ":" + nextPos.ToString(), DEBUG_TYPE.BUILDING_RAIL);
+		Log.Debug("Rails::PlanAndBuildPartOfRail *** Na" + actualBacktrackingNode.depth + ":" + nextPos.ToString(), DEBUG_TYPE.BUILDING_RAIL);
+
+		if (Rails.IsOppositeDirection(actualBacktrackingNode.direction, direction)) {
+			Log.Debug("Rails::PlanAndBuildPartOfRail *** Skipping reverse direction", DEBUG_TYPE.BUILDING_RAIL);
+			return null;
+		}
 
 		possibility = Rails.BestNodeToContinuePath(fromNode, nextPos, direction);
 		if (possibility == null) {
@@ -176,13 +185,13 @@ function Rails::PlanAndBuildPartOfRail(actualBacktrackingNode, toDirectionNode) 
 		nextNodeInDirection = possibility.MovePositionByDirection(direction);
 		// Ns = Node specific, it will create rail to this exact location
 		Log.CreateSign(possibility.tile, "Ns" + actualBacktrackingNode.depth + ":" + possibility.ToString(), DEBUG_TYPE.BUILDING_RAIL);
-		Log.Debug("Rails::PlanRail *** Ns" + actualBacktrackingNode.depth + ":" + possibility.ToString()), DEBUG_TYPE.BUILDING_RAIL
+		Log.Debug("Rails::PlanAndBuildPartOfRail *** Ns" + actualBacktrackingNode.depth + ":" + possibility.ToString()), DEBUG_TYPE.BUILDING_RAIL
 	} else {
-		Log.Debug("Rails::PlanRail *** From " + fromNode.ToString() + " to " + toNode.ToString() + " is close enough, finishing route");
+		Log.Debug("Rails::PlanAndBuildPartOfRail *** From " + fromNode.ToString() + " to " + toNode.ToString() + " is close enough, finishing route");
 	}
 
 	local pathfinder = RailPathFinder();
-	Log.Debug("Rails::PlanRail *** Pathfinding from " + actualBacktrackingNode.directionNode.ToString() + " to " +
+	Log.Debug("Rails::PlanAndBuildPartOfRail *** Pathfinding from " + actualBacktrackingNode.directionNode.ToString() + " to " +
 		nextNodeInDirection.ToString() + "-" + possibility.ToString(), DEBUG_TYPE.BUILDING_RAIL);
 	pathfinder.InitializePath([
 		[possibility.tile, nextNodeInDirection.tile]
@@ -198,15 +207,16 @@ function Rails::PlanAndBuildPartOfRail(actualBacktrackingNode, toDirectionNode) 
 	local path = pathfinder.FindPath(findingTime);
 
 	if (path == false || path == null) {
-		Log.Debug("Rails::PlanRail *** Path not found", DEBUG_TYPE.BUILDING_RAIL);
+		Log.Debug("Rails::PlanAndBuildPartOfRail *** Path not found", DEBUG_TYPE.BUILDING_RAIL);
 		return null;
 	}
 	local newNode = possibility.MovePositionNode(Rails.DirectionToNode(direction));
 
-	Log.Debug("Rails::PlanRail *** Found Path: Next node no. " + actualBacktrackingNode.depth + ":" + newNode.ToString(), DEBUG_TYPE.BUILDING_RAIL);
-	Log.Debug("Rails::PlanRail *** Building from " + fromNode.ToString() + " to " + newNode.ToString(), DEBUG_TYPE.BUILDING_RAIL);
+	Log.Debug("Rails::PlanAndBuildPartOfRail *** Found Path: Next node no. " + actualBacktrackingNode.depth + ":" + newNode.ToString(), DEBUG_TYPE.BUILDING_RAIL);
+	Log.Debug("Rails::PlanAndBuildPartOfRail *** Building from " + fromNode.ToString() + " to " + newNode.ToString(), DEBUG_TYPE.BUILDING_RAIL);
 	// Nn = Node next, where new part of the rail will start
 	Log.CreateSign(newNode.tile, "Nn" + actualBacktrackingNode.depth + ":" + newNode.ToString(), DEBUG_TYPE.BUILDING_RAIL);
+	Log.Debug("Rails::PlanAndBuildPartOfRail *** Nn" + actualBacktrackingNode.depth + ":" + newNode.ToString(), DEBUG_TYPE.BUILDING_RAIL);
 
 	Rails.BuildRail(path);
 	return {
