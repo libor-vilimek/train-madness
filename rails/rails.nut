@@ -157,6 +157,7 @@ function Rails::PlanAndBuildPartOfRail(actualBacktrackingNode, toDirectionNode) 
 	local toNode = toDirectionNode.fromNode;
 	local possibility = toNode;
 	local direction = actualBacktrackingNode.direction;
+	local nextNodeInDirection = toDirectionNode.toNode;
 
 	if (Node.GetManhattanDistance(fromNode, toNode) > DIFF_TO_FINISH_ROUTE) {
 		Log.Debug("Rails::PlanRail *** Looking for next waypoint From " + fromNode.ToString() + " to" + toNode.ToString(), DEBUG_TYPE.BUILDING_RAIL);
@@ -172,6 +173,7 @@ function Rails::PlanAndBuildPartOfRail(actualBacktrackingNode, toDirectionNode) 
 			Log.Debug("Rails::PlanAndBuildPartOfRail *** Not even one usable tile was found", DEBUG_TYPE.BUILDING_RAIL);
 			return null;
 		}
+		nextNodeInDirection = possibility.MovePositionByDirection(direction);
 		// Ns = Node specific, it will create rail to this exact location
 		Log.CreateSign(possibility.tile, "Ns" + actualBacktrackingNode.depth + ":" + possibility.ToString(), DEBUG_TYPE.BUILDING_RAIL);
 		Log.Debug("Rails::PlanRail *** Ns" + actualBacktrackingNode.depth + ":" + possibility.ToString()), DEBUG_TYPE.BUILDING_RAIL
@@ -180,7 +182,6 @@ function Rails::PlanAndBuildPartOfRail(actualBacktrackingNode, toDirectionNode) 
 	}
 
 	local pathfinder = RailPathFinder();
-	local nextNodeInDirection = possibility.MovePositionByDirection(direction);
 	Log.Debug("Rails::PlanRail *** Pathfinding from " + actualBacktrackingNode.directionNode.ToString() + " to " +
 		nextNodeInDirection.ToString() + "-" + possibility.ToString(), DEBUG_TYPE.BUILDING_RAIL);
 	pathfinder.InitializePath([

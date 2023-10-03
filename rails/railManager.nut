@@ -103,8 +103,8 @@ function RailManager::BuildStations(industryProduce, industryAccept) {
 			startTest = null;
 			local result = AIRail.BuildRailStation(location, AIRail.RAILTRACK_NE_SW, 1, 7, AIStation.STATION_NEW);
 			Log.CreateSign(location, "Building station here", DEBUG_TYPE.BUILDING_STATION);
-			endLocationPrev = Node.CreateFromTile(location);
-			endLocation = Node.CreateFromTile(location + AIMap.GetTileIndex(-1, 0));
+			endLocationPrev = Node.CreateFromTile(location + AIMap.GetTileIndex(-1, 0));
+			endLocation = Node.CreateFromTile(location);
 			endLocation2 = Node.CreateFromTile(location + AIMap.GetTileIndex(7, 0));
 			Log.CreateSign(endLocation.tile, "Rail ending in here: " + endLocation.ToString(), DEBUG_TYPE.BUILDING_STATION);
 			break;
